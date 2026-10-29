@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gia Đình | Quản lý chi tiêu</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<section class="auth-screen" id="authScreen">
+  <form class="auth-card" id="loginForm">
+    <div class="brand-mark">♡</div>
+    <h1>Đăng nhập sổ gia đình</h1>
+    <p class="eyebrow">Đăng nhập để đồng bộ giao dịch qua Firebase.</p>
+    <div class="field"><label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="username" required></div>
+    <div class="field"><label for="loginPassword">Mật khẩu</label><input id="loginPassword" type="password" autocomplete="current-password" required></div>
+    <p class="auth-error" id="authError" role="alert" hidden></p>
+    <button class="btn" id="loginButton" type="submit">Đăng nhập</button>
+  </form>
+</section>
+<div class="app" id="appShell" hidden>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">♡</span><span id="brandName">Gia Đình</span></div>
+    <nav class="nav" id="nav">
+      <button class="active" data-page="overview"><span>▦</span>Tổng quan</button>
+      <button data-page="transactions"><span>▤</span>Sổ chi tiêu</button>
+      <button data-page="reports"><span>▥</span>Báo cáo tháng</button>
+      <button data-page="funds"><span>▱</span>Nguồn tiền</button>
+      <button data-page="settings"><span>⚙</span>Cài đặt</button>
+    </nav>
+    <div class="user-area"><div class="user"><span class="avatar">N</span> Nọc Ín</div><div class="user"><span class="avatar">T</span> Tks Hòe</div><div class="user firebase-user" id="signedInEmail"></div><button class="logout" id="signOutBtn">↪ Đăng xuất</button><button class="logout" id="resetBtn">↪ Xóa dữ liệu trên thiết bị</button></div>
+  </aside>
+  <main>
+    <header class="topbar">
+      <div><div class="eyebrow">SỔ CHI TIÊU GIA ĐÌNH</div><h1 id="pageTitle">Tổng quan tài chính</h1></div>
+      <div class="top-actions"><span class="pill" id="monthPill"></span><button class="btn" id="addBtn">＋ Thêm khoản chi</button></div>
+    </header>
+    <section class="page active" id="page-overview">
+      <div class="stats">
+        <div class="stat"><div class="stat-head">Chi tiêu hôm nay <span class="stat-icon">▣</span></div><strong id="todayTotal">0 ₫</strong><small id="todayCount">0 khoản chi</small></div>
+        <div class="stat"><div class="stat-head">Chi tiêu tháng này <span class="stat-icon">▤</span></div><strong id="monthTotal">0 ₫</strong><small id="monthCount">0 giao dịch</small></div>
+        <div class="stat"><div class="stat-head">Tổng thu nhập tháng <span class="stat-icon">↗</span></div><strong id="incomeTotal">0 ₫</strong><small>Thu nhập đã ghi nhận</small></div>
+        <div class="stat"><div class="stat-head">Còn lại trong tháng <span class="stat-icon">◈</span></div><strong id="remainingTotal">0 ₫</strong><small>Thu nhập trừ chi tiêu</small></div>
+      </div>
+      <div class="content-grid">
+        <div class="panel"><div class="panel-title"><div><h2>Chi tiêu 7 ngày gần nhất</h2><p>Tổng hợp tự động từ các khoản đã ghi</p></div></div><div class="bars" id="weekBars"></div></div>
+        <div class="panel"><div class="panel-title"><div><h2>Chi tiêu theo danh mục</h2><p id="categorySubtitle">Tháng hiện tại</p></div></div><div class="category-list" id="categoryList"></div></div>
+      </div>
+      <div class="panel"><div class="panel-title"><div><h2>Giao dịch gần đây</h2><p>Các khoản thu chi mới nhất</p></div><button class="btn secondary" data-goto="transactions">Xem sổ chi tiêu →</button></div><div class="table-wrap"><table><thead><tr><th>Ngày giờ</th><th>Nội dung</th><th>Danh mục</th><th>Số tiền</th><th>Người chi</th><th>Nguồn tiền</th><th>Thao tác</th></tr></thead><tbody id="recentRows"></tbody></table></div></div>
+    </section>
+    <section class="page" id="page-transactions">
+      <div class="panel top-gap"><div class="panel-title"><div><h2>Chi tiêu theo ngày</h2><p>Xem các giao dịch và hạn mức của Tks Hòe trong ngày đã chọn</p></div><input type="date" id="dayPicker" class="pill" aria-label="Chọn ngày xem chi tiêu"></div><div class="day-summary"><div><div class="eyebrow">TỔNG CHI TRONG NGÀY</div><div class="big" id="dayTotal">0 ₫</div></div><div><div class="eyebrow">SỐ KHOẢN CHI</div><strong id="dayCount">0</strong></div><div class="allowance-card" id="husbandAllowanceCard"><div class="eyebrow">HẠN MỨC CHI CỦA TKS HÒE</div><div class="allowance-amount"><span id="husbandAllowanceSpent">0 ₫</span> <span class="allowance-budget">/ <span id="husbandAllowanceBudget">100.000 ₫</span></span></div><div class="allowance-status" id="husbandAllowanceRemaining">Còn lại 100.000 ₫</div><div class="allowance-track" role="progressbar" aria-label="Mức chi tiêu trong ngày của Tks Hòe" aria-valuemin="0" aria-valuemax="100000" aria-valuenow="0"><div id="husbandAllowanceProgress"></div></div></div></div><div class="spacer"></div><div class="table-wrap"><table><thead><tr><th>Ngày giờ</th><th>Nội dung</th><th>Danh mục</th><th>Số tiền</th><th>Người chi</th><th>Nguồn tiền</th><th>Thao tác</th></tr></thead><tbody id="dailyRows"></tbody></table></div></div>
+    </section>
+    <section class="page" id="page-reports">
+      <div class="panel"><div class="panel-title"><div><h2>Báo cáo tháng</h2><p>Tổng hợp theo tháng được chọn</p></div><input type="month" class="pill" id="reportMonth"></div><div class="filters"><input id="reportSearchInput" placeholder="⌕ Tìm theo nội dung, ghi chú..."><select id="reportTypeFilter"><option value="all">Tất cả loại giao dịch</option><option value="expense">Chi tiêu</option><option value="income">Thu nhập</option></select><select id="reportCategoryFilter"><option value="all">Tất cả danh mục</option></select><select id="reportPersonFilter"><option value="all">Tất cả người</option><option value="Vợ">Nọc Ín</option><option value="Chồng">Tks Hòe</option></select><input type="date" id="reportDateFilter" aria-label="Lọc giao dịch theo ngày" title="Lọc giao dịch theo ngày"></div><div class="report-cards"><div class="report-card"><span>Tổng thu nhập</span><strong class="green" id="reportIncome">0 ₫</strong></div><div class="report-card"><span>Tổng chi tiêu</span><strong class="red" id="reportExpense">0 ₫</strong></div><div class="report-card"><span>Chênh lệch</span><strong id="reportBalance">0 ₫</strong></div></div><div class="content-grid"><div class="panel"><div class="panel-title"><h2>Chi tiêu theo danh mục</h2></div><div class="category-list" id="reportCategories"></div></div><div class="panel"><div class="panel-title"><h2>Tổng chi theo ngày</h2></div><div class="bars" id="reportBars"></div></div></div><div class="panel-title"><h2>Giao dịch trong tháng</h2><span class="eyebrow" id="reportRowCount">0 giao dịch</span></div><div class="table-wrap"><table><thead><tr><th>Ngày giờ</th><th>Nội dung</th><th>Danh mục</th><th>Số tiền</th><th>Người thực hiện</th><th>Nguồn tiền</th><th>Thao tác</th></tr></thead><tbody id="reportRows"></tbody></table></div></div>
+    </section>
+    <section class="page" id="page-funds"><div class="panel"><div class="panel-title"><div><h2>Nguồn tiền gia đình</h2><p>Tổng thu trừ chi đã ghi theo nguồn</p></div><button class="btn secondary" id="manageFunds">＋ Thêm nguồn tiền</button></div><div class="category-list" id="fundList"></div><p class="eyebrow top-gap">Số liệu này không phải số dư ngân hàng xác thực.</p></div></section>
+    <section class="page" id="page-settings"><div class="panel"><div class="panel-title"><div><h2>Cài đặt</h2><p>Tùy chỉnh sổ chi tiêu gia đình</p></div></div><div class="settings-grid"><div><div class="field"><label>Tên sổ gia đình</label><input id="familyName" value="Gia Đình"></div><div class="field"><label>Đơn vị tiền tệ</label><select disabled><option>VNĐ (₫)</option></select></div><button class="btn" id="saveSettings">Lưu cài đặt</button></div><div><h3>Dữ liệu đồng bộ</h3><p class="eyebrow">Giao dịch được đồng bộ qua Firebase Realtime Database. Dữ liệu cũ trên thiết bị chỉ được tải lên khi bạn xác nhận sau khi đăng nhập.</p><button class="btn danger" id="clearAll">Xóa toàn bộ giao dịch</button></div></div></div></section>
+  </main>
+</div>
+<div class="modal-backdrop" id="modalBackdrop"><div class="modal"><div class="modal-head"><h2 id="modalTitle">Thêm khoản chi</h2><button class="close" id="closeModal">✕</button></div><form id="transactionForm"><input type="hidden" id="txId"><div class="form-grid">
+<div class="field"><label>Loại giao dịch *</label><select id="txType"><option value="expense">Chi tiêu</option><option value="income">Thu nhập</option></select></div>
+<div class="field"><label>Ngày giờ *</label><input id="txDate" type="datetime-local" required></div>
+<div class="field"><label>Nội dung mua gì / khoản thu *</label><input id="txTitle" required placeholder="Ví dụ: Mua thực phẩm, tiền điện..."></div>
+<div class="field"><label>Số tiền (VNĐ) *</label><input id="txAmount" type="number" min="1" step="1" required placeholder="150000"></div>
+<div class="field"><label>Danh mục *</label><select id="txCategory" required></select></div>
+<div class="field"><label>Người thực hiện *</label><select id="txPerson"><option value="Vợ">Nọc Ín</option><option value="Chồng">Tks Hòe</option></select></div>
+<div class="field"><label>Nguồn tiền *</label><select id="txFund"><option>Tiền chung</option><option>Lương vợ</option><option>Lương chồng</option><option>Tiền tiết kiệm</option><option>Nguồn khác</option></select></div>
+<div class="field"><label>Ghi chú</label><input id="txNote" placeholder="Ví dụ: mua ở chợ, có hóa đơn..."></div>
+<div class="field span-2"><label>Ghi chú chi tiết</label><textarea id="txDetails" placeholder="Thêm thông tin về giao dịch..."></textarea></div>
+</div><div class="modal-actions"><button type="button" class="btn secondary" id="cancelModal">Hủy</button><button class="btn" type="submit">Lưu giao dịch</button></div></form></div></div>
+<div class="toast" id="toast"></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "households": {
+      "quanlygiadinh-94ced": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}
