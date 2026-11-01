@@ -141,7 +141,6 @@ $('signOutBtn').addEventListener('click', async () => {
   }
 });
 
-$('addBtn').onclick = () => openModal();
 $('closeModal').onclick = $('cancelModal').onclick = closeModal;
 $('modalBackdrop').addEventListener('click', event => {
   if (event.target === $('modalBackdrop')) closeModal();
