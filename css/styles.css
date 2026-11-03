@@ -29,7 +29,7 @@
 @media(max-width:680px){.report-day summary{flex-wrap:wrap}.report-day-total{width:calc(100% - 16px);margin-left:16px;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:4px;white-space:normal;font-size:12px}}
 @media(max-width:680px){.topbar.report-mode{gap:10px;margin-bottom:18px}.report-top-filters.filters{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:8px}.report-top-filters #reportSearchInput,.report-top-filters #reportDateFilter{grid-column:1/-1}.report-top-filters input,.report-top-filters select{font-size:12px;padding:8px}}
 .sidebar{position:fixed;inset:0 auto 0 0;height:100vh;overflow-y:auto;z-index:5}
-@media(max-width:680px){#page-reports .report-day table{width:100%;min-width:0;table-layout:fixed}#page-reports .report-day th,#page-reports .report-day td{padding:10px 5px}#page-reports .report-day th:nth-child(2),#page-reports .report-day td:nth-child(2){width:40%}#page-reports .report-day th:nth-child(4),#page-reports .report-day td:nth-child(4){width:26%}#page-reports .report-day th:nth-child(7),#page-reports .report-day td:nth-child(7){width:34%}#page-reports .report-day td:nth-child(7) .actions{gap:2px;flex-wrap:nowrap}#page-reports .report-day td:nth-child(7) .icon-btn{padding:5px 4px}}
+@media(max-width:680px){#page-reports .report-day table{width:100%;min-width:0;table-layout:fixed}}
 .report-day-debt-total{color:#dc2626;background:#fff2b3;padding:2px 6px;border-radius:5px}
 main{margin-left:235px}
 @media(max-width:1050px){main{margin-left:205px}}
