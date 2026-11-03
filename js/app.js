@@ -1,9 +1,10 @@
 import { $, currentMonth, dateKey, loadTransactions, saveTransactions, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './modules/data.js';
 import { observeAuth, login, logout, observeTransactions, writeTransactions } from './modules/firebase.js';
 import { renderReports } from './modules/reports.js';
-import { renderDailySummary } from './modules/transactions.js';
+import { getFilteredTransactions, renderDailySummary } from './modules/transactions.js';
 import { openModal, closeModal, fillCategories } from './modules/modal.js';
 import { initNavigation } from './modules/navigation.js';
+import { exportLedger, exportMonthlyReport, readTransactionsFile } from './modules/excel.js';
 
 let transactions = loadTransactions();
 let cloudReady = false;
@@ -177,6 +178,56 @@ $('dayPicker').value = dateKey(new Date());
 $('reportMonth').value = currentMonth;
 $('dayPicker').addEventListener('change', () => renderDailySummary(transactions));
 $('reportMonth').addEventListener('change', render);
+$('exportLedgerBtn').addEventListener('click', () => {
+  try {
+    exportLedger(transactions);
+    toast('Đã xuất toàn bộ giao dịch ra Excel.');
+  } catch (error) {
+    console.error('Không thể xuất sổ thu chi ra Excel:', error);
+    toast(error.message || 'Xuất Excel thất bại.');
+  }
+});
+$('exportReportBtn').addEventListener('click', () => {
+  try {
+    exportMonthlyReport(getFilteredTransactions(transactions), $('reportMonth').value);
+    toast('Đã xuất báo cáo tháng ra Excel.');
+  } catch (error) {
+    console.error('Không thể xuất báo cáo tháng ra Excel:', error);
+    toast(error.message || 'Xuất Excel thất bại.');
+  }
+});
+let importTarget = 'ledger';
+function chooseExcelFile(target) {
+  importTarget = target;
+  $('excelFileInput').click();
+}
+$('importLedgerBtn').addEventListener('click', () => chooseExcelFile('ledger'));
+$('importReportBtn').addEventListener('click', () => chooseExcelFile('report'));
+$('excelFileInput').addEventListener('change', async event => {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const importedTransactions = await readTransactionsFile(file);
+    const existingIds = new Set(transactions.map(transaction => transaction.id));
+    const seenIds = new Set();
+    const additions = importedTransactions.filter(transaction => {
+      if (existingIds.has(transaction.id) || seenIds.has(transaction.id)) return false;
+      seenIds.add(transaction.id);
+      return true;
+    });
+    if (!additions.length) {
+      toast(`Không có giao dịch mới; đã bỏ qua ${importedTransactions.length} giao dịch trùng ID.`);
+      return;
+    }
+    transactions = [...transactions, ...additions];
+    void persist(`Đã nhập ${additions.length} giao dịch; bỏ qua ${importedTransactions.length - additions.length} giao dịch trùng ID.`);
+  } catch (error) {
+    console.error(`Không thể nhập file Excel (${importTarget}):`, error);
+    toast(error.message || 'Nhập Excel thất bại.');
+  } finally {
+    event.target.value = '';
+  }
+});
 $('reportCategoryFilter').innerHTML = '<option value="all">Tất cả danh mục</option>' +
   [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES].map(category => `<option>${category}</option>`).join('');
 

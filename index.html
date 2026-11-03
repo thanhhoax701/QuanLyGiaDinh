@@ -97,19 +97,23 @@
         </header>
         <section class="page active" id="page-transactions">
           <div class="panel top-gap">
-            <div class="panel-title">
+            <div class="panel-title file-panel-title">
               <div>
                 <h2>Chi tiêu theo ngày</h2>
                 <p>
                   Xem các giao dịch và hạn mức của Tks Hòe trong ngày đã chọn
                 </p>
               </div>
-              <input
-                type="date"
-                id="dayPicker"
-                class="pill"
-                aria-label="Chọn ngày xem chi tiêu"
-              />
+              <div class="file-actions">
+                <input
+                  type="date"
+                  id="dayPicker"
+                  class="pill"
+                  aria-label="Chọn ngày xem chi tiêu"
+                />
+                <button class="btn secondary" id="importLedgerBtn" type="button">Nhập Excel</button>
+                <button class="btn secondary" id="exportLedgerBtn" type="button">Xuất Excel</button>
+              </div>
             </div>
             <div class="day-summary">
               <div>
@@ -164,12 +168,16 @@
         </section>
         <section class="page" id="page-reports">
           <div class="panel">
-            <div class="panel-title">
+            <div class="panel-title file-panel-title">
               <div>
                 <h2>Báo cáo tháng</h2>
                 <p>Tổng hợp theo tháng được chọn</p>
               </div>
-              <input type="month" class="pill" id="reportMonth" />
+              <div class="file-actions">
+                <input type="month" class="pill" id="reportMonth" />
+                <button class="btn secondary" id="importReportBtn" type="button">Nhập Excel</button>
+                <button class="btn secondary" id="exportReportBtn" type="button">Xuất Excel</button>
+              </div>
             </div>
             <details class="report-summary">
               <summary>Xem tổng hợp tháng</summary>
@@ -370,6 +378,8 @@
       </div>
     </div>
     <div class="toast" id="toast"></div>
+    <input id="excelFileInput" type="file" accept=".xlsx,.xls,.csv" hidden />
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
     <script type="module" src="js/app.js"></script>
   </body>
 </html>
