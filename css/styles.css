@@ -119,3 +119,4 @@ main{margin-left:235px}
   #page-reports>.panel>.panel-title:not(.file-panel-title) h2{min-width:0;font-size:15px;line-height:1.4}
   #page-reports #reportRowCount{white-space:nowrap;font-size:11px;text-align:right}
 }
+#page-reports .report-day-total>.report-day-debt-total{color:#fff;background:#dc2626;font-weight:750}
