@@ -77,6 +77,8 @@ function deleteTransaction(id) {
 function startTransactionSync(user) {
   stopTransactionListener?.();
   cloudReady = false;
+  showApp(user);
+  render();
   let firstSnapshot = true;
   stopTransactionListener = observeTransactions(async remoteTransactions => {
     if (firstSnapshot) {
@@ -108,9 +110,10 @@ function startTransactionSync(user) {
   }, error => {
     cloudReady = false;
     console.error('Không thể đồng bộ Firebase Realtime Database:', error);
-    showAuthError('Không đọc được dữ liệu Firebase. Kiểm tra URL database và Realtime Database Rules, sau đó tải lại trang.');
-    $('authScreen').hidden = false;
-    $('appShell').hidden = true;
+    const message = error.code === 'PERMISSION_DENIED'
+      ? 'Đã đăng nhập nhưng Firebase từ chối quyền đọc dữ liệu. Kiểm tra Realtime Database Rules đã Publish và cho phép người dùng đăng nhập.'
+      : 'Đã đăng nhập nhưng không thể đồng bộ dữ liệu Firebase. Kiểm tra kết nối, URL database và thử tải lại trang.';
+    toast(message);
   });
 }
 
