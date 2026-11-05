@@ -1,5 +1,5 @@
 import { $, currentMonth, dateKey, loadTransactions, saveTransactions, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './modules/data.js';
-import { observeAuth, login, loginWithGoogle, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
+import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
 import { renderReports } from './modules/reports.js';
 import { getFilteredTransactions, renderDailySummary } from './modules/transactions.js';
 import { openModal, closeModal, fillCategories } from './modules/modal.js';
@@ -174,6 +174,12 @@ $('googleLoginButton').addEventListener('click', () => {
   loginAttempt
     .catch(error => {
       console.error('Đăng nhập Firebase bằng Google thất bại:', error);
+      if (error.code === 'auth/popup-blocked') {
+        return loginWithGoogleRedirect().catch(redirectError => {
+          console.error('Không thể chuyển sang đăng nhập Google bằng chuyển hướng:', redirectError);
+          showAuthError(googleAuthErrorMessage(redirectError));
+        });
+      }
       showAuthError(googleAuthErrorMessage(error));
     })
     .finally(() => {
@@ -355,6 +361,10 @@ function clearData() {
 $('clearAll').onclick = clearData;
 
 initNavigation();
+completeGoogleRedirect().catch(error => {
+  console.error('Đăng nhập Google bằng chuyển hướng thất bại:', error);
+  showAuthError(googleAuthErrorMessage(error));
+});
 observeAuth(user => {
   if (!user) {
     stopTransactionListener?.();

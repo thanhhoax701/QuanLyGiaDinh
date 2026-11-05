@@ -1,5 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import { getAuth, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import { getDatabase, onValue, ref, set } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
 
 const firebaseConfig = {
@@ -28,6 +28,14 @@ export function login(email, password) {
 
 export function loginWithGoogle() {
   return signInWithPopup(auth, new GoogleAuthProvider());
+}
+
+export function loginWithGoogleRedirect() {
+  return signInWithRedirect(auth, new GoogleAuthProvider());
+}
+
+export function completeGoogleRedirect() {
+  return getRedirectResult(auth);
 }
 
 export function sendPasswordReset(email) {
