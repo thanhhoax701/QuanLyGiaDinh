@@ -255,7 +255,7 @@ function clearData() {
     void persist('Đã xóa toàn bộ giao dịch');
   }
 }
-$('clearAll').onclick = $('resetBtn').onclick = clearData;
+$('clearAll').onclick = clearData;
 
 initNavigation();
 observeAuth(user => {
