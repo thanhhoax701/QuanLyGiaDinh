@@ -35,7 +35,7 @@ function googleAuthErrorMessage(error) {
   const messages = {
     'auth/account-exists-with-different-credential': 'Email này đã được đăng ký bằng phương thức đăng nhập khác. Hãy đăng nhập bằng phương thức đó.',
     'auth/cancelled-popup-request': 'Một cửa sổ đăng nhập khác đang được mở. Vui lòng thử lại.',
-    'auth/popup-blocked': 'Không thể mở cửa sổ đăng nhập. Hãy thử đăng nhập lại hoặc kiểm tra cài đặt trình duyệt.',
+    'auth/popup-blocked': 'Trình duyệt đã chặn cửa sổ đăng nhập Google. Hãy cho phép popup cho trang này rồi thử lại.',
     'auth/popup-closed-by-user': 'Cửa sổ đăng nhập đã bị đóng trước khi hoàn tất.',
     'auth/operation-not-allowed': 'Firebase Authentication chưa bật phương thức đăng nhập bằng Google.',
     'auth/unauthorized-domain': 'Tên miền hiện tại chưa được cho phép trong Firebase Authentication.',
@@ -158,19 +158,27 @@ $('loginForm').addEventListener('submit', async event => {
   }
 });
 
-$('googleLoginButton').addEventListener('click', async () => {
+$('googleLoginButton').addEventListener('click', () => {
   const button = $('googleLoginButton');
-  button.disabled = true;
-  showAuthError('');
-  showAuthNotice('');
+  let loginAttempt;
   try {
-    await loginWithGoogle();
+    loginAttempt = loginWithGoogle();
   } catch (error) {
     console.error('Đăng nhập Firebase bằng Google thất bại:', error);
     showAuthError(googleAuthErrorMessage(error));
-  } finally {
-    button.disabled = false;
+    return;
   }
+  button.disabled = true;
+  showAuthError('');
+  showAuthNotice('');
+  loginAttempt
+    .catch(error => {
+      console.error('Đăng nhập Firebase bằng Google thất bại:', error);
+      showAuthError(googleAuthErrorMessage(error));
+    })
+    .finally(() => {
+      button.disabled = false;
+    });
 });
 
 $('forgotPasswordButton').addEventListener('click', () => {
