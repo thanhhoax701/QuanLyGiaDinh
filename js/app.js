@@ -1,5 +1,5 @@
 import { $, currentMonth, dateKey, loadTransactions, saveTransactions, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './modules/data.js';
-import { observeAuth, login, loginWithGoogle, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
+import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
 import { renderReports } from './modules/reports.js';
 import { getFilteredTransactions, renderDailySummary } from './modules/transactions.js';
 import { openModal, closeModal, fillCategories } from './modules/modal.js';
@@ -29,6 +29,19 @@ function showAuthError(message) {
 function showAuthNotice(message) {
   $('authNotice').textContent = message;
   $('authNotice').hidden = !message;
+}
+
+function googleAuthErrorMessage(error) {
+  const messages = {
+    'auth/account-exists-with-different-credential': 'Email này đã được đăng ký bằng phương thức đăng nhập khác. Hãy đăng nhập bằng phương thức đó.',
+    'auth/cancelled-popup-request': 'Một cửa sổ đăng nhập khác đang được mở. Vui lòng thử lại.',
+    'auth/popup-blocked': 'Không thể mở cửa sổ đăng nhập. Hãy thử đăng nhập lại hoặc kiểm tra cài đặt trình duyệt.',
+    'auth/popup-closed-by-user': 'Cửa sổ đăng nhập đã bị đóng trước khi hoàn tất.',
+    'auth/operation-not-allowed': 'Firebase Authentication chưa bật phương thức đăng nhập bằng Google.',
+    'auth/unauthorized-domain': 'Tên miền hiện tại chưa được cho phép trong Firebase Authentication.',
+    'auth/network-request-failed': 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.'
+  };
+  return messages[error.code] || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại.';
 }
 
 function showApp(user) {
@@ -148,16 +161,17 @@ $('googleLoginButton').addEventListener('click', async () => {
     await loginWithGoogle();
   } catch (error) {
     console.error('Đăng nhập Firebase bằng Google thất bại:', error);
-    const messages = {
-      'auth/account-exists-with-different-credential': 'Email này đã được đăng ký bằng phương thức đăng nhập khác. Hãy đăng nhập bằng phương thức đó.',
-      'auth/cancelled-popup-request': 'Một cửa sổ đăng nhập khác đang được mở. Vui lòng thử lại.',
-      'auth/popup-blocked': 'Trình duyệt đã chặn cửa sổ đăng nhập. Cho phép cửa sổ bật lên rồi thử lại.',
-      'auth/popup-closed-by-user': 'Cửa sổ đăng nhập đã bị đóng trước khi hoàn tất.',
-      'auth/operation-not-allowed': 'Firebase Authentication chưa bật phương thức đăng nhập bằng Google.',
-      'auth/unauthorized-domain': 'Tên miền hiện tại chưa được cho phép trong Firebase Authentication.',
-      'auth/network-request-failed': 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.'
-    };
-    showAuthError(messages[error.code] || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại.');
+    if (error.code === 'auth/popup-blocked') {
+      try {
+        await loginWithGoogleRedirect();
+        return;
+      } catch (redirectError) {
+        console.error('Không thể chuyển sang đăng nhập Google bằng chuyển hướng:', redirectError);
+        showAuthError(googleAuthErrorMessage(redirectError));
+      }
+    } else {
+      showAuthError(googleAuthErrorMessage(error));
+    }
   } finally {
     button.disabled = false;
   }
@@ -337,6 +351,10 @@ function clearData() {
 $('clearAll').onclick = clearData;
 
 initNavigation();
+completeGoogleRedirect().catch(error => {
+  console.error('Đăng nhập Google bằng chuyển hướng thất bại:', error);
+  showAuthError(googleAuthErrorMessage(error));
+});
 observeAuth(user => {
   showAuthError('');
   if (!user) {
