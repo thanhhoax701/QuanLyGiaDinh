@@ -1,5 +1,5 @@
 import { $, currentMonth, dateKey, loadTransactions, saveTransactions, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './modules/data.js';
-import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
+import { observeAuth, login, loginWithGoogle, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
 import { renderReports } from './modules/reports.js';
 import { getFilteredTransactions, renderDailySummary } from './modules/transactions.js';
 import { openModal, closeModal, fillCategories } from './modules/modal.js';
@@ -39,9 +39,12 @@ function googleAuthErrorMessage(error) {
     'auth/popup-closed-by-user': 'Cửa sổ đăng nhập đã bị đóng trước khi hoàn tất.',
     'auth/operation-not-allowed': 'Firebase Authentication chưa bật phương thức đăng nhập bằng Google.',
     'auth/unauthorized-domain': 'Tên miền hiện tại chưa được cho phép trong Firebase Authentication.',
-    'auth/network-request-failed': 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.'
+    'auth/network-request-failed': 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.',
+    'auth/invalid-api-key': 'Cấu hình Firebase không hợp lệ. Kiểm tra API key của ứng dụng.',
+    'auth/web-storage-unsupported': 'Trình duyệt đang chặn bộ nhớ cần thiết để đăng nhập. Hãy bật cookie/bộ nhớ trang web rồi thử lại.'
   };
-  return messages[error.code] || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại.';
+  const message = messages[error.code] || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại.';
+  return error.code ? `${message} (mã lỗi: ${error.code})` : message;
 }
 
 function showApp(user) {
@@ -164,17 +167,7 @@ $('googleLoginButton').addEventListener('click', async () => {
     await loginWithGoogle();
   } catch (error) {
     console.error('Đăng nhập Firebase bằng Google thất bại:', error);
-    if (error.code === 'auth/popup-blocked') {
-      try {
-        await loginWithGoogleRedirect();
-        return;
-      } catch (redirectError) {
-        console.error('Không thể chuyển sang đăng nhập Google bằng chuyển hướng:', redirectError);
-        showAuthError(googleAuthErrorMessage(redirectError));
-      }
-    } else {
-      showAuthError(googleAuthErrorMessage(error));
-    }
+    showAuthError(googleAuthErrorMessage(error));
   } finally {
     button.disabled = false;
   }
@@ -354,12 +347,7 @@ function clearData() {
 $('clearAll').onclick = clearData;
 
 initNavigation();
-completeGoogleRedirect().catch(error => {
-  console.error('Đăng nhập Google bằng chuyển hướng thất bại:', error);
-  showAuthError(googleAuthErrorMessage(error));
-});
 observeAuth(user => {
-  showAuthError('');
   if (!user) {
     stopTransactionListener?.();
     stopTransactionListener = undefined;
@@ -369,6 +357,7 @@ observeAuth(user => {
     $('loginPassword').value = '';
     return;
   }
+  showAuthError('');
   startTransactionSync(user);
 }, error => {
   console.error('Không thể kiểm tra trạng thái đăng nhập Firebase:', error);
