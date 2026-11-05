@@ -1,5 +1,5 @@
 import { $, currentMonth, dateKey, loadTransactions, saveTransactions, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './modules/data.js';
-import { observeAuth, login, logout, observeTransactions, writeTransactions } from './modules/firebase.js';
+import { observeAuth, login, loginWithGoogle, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
 import { renderReports } from './modules/reports.js';
 import { getFilteredTransactions, renderDailySummary } from './modules/transactions.js';
 import { openModal, closeModal, fillCategories } from './modules/modal.js';
@@ -24,6 +24,11 @@ function toast(message) {
 function showAuthError(message) {
   $('authError').textContent = message;
   $('authError').hidden = !message;
+}
+
+function showAuthNotice(message) {
+  $('authNotice').textContent = message;
+  $('authNotice').hidden = !message;
 }
 
 function showApp(user) {
@@ -116,6 +121,7 @@ $('loginForm').addEventListener('submit', async event => {
   const button = $('loginButton');
   button.disabled = true;
   showAuthError('');
+  showAuthNotice('');
   try {
     await login($('loginEmail').value.trim(), $('loginPassword').value);
   } catch (error) {
@@ -128,6 +134,79 @@ $('loginForm').addEventListener('submit', async event => {
       'auth/network-request-failed': 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.'
     };
     showAuthError(messages[error.code] || 'Đăng nhập thất bại. Kiểm tra tài khoản và cấu hình Firebase.');
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$('googleLoginButton').addEventListener('click', async () => {
+  const button = $('googleLoginButton');
+  button.disabled = true;
+  showAuthError('');
+  showAuthNotice('');
+  try {
+    await loginWithGoogle();
+  } catch (error) {
+    console.error('Đăng nhập Firebase bằng Google thất bại:', error);
+    const messages = {
+      'auth/account-exists-with-different-credential': 'Email này đã được đăng ký bằng phương thức đăng nhập khác. Hãy đăng nhập bằng phương thức đó.',
+      'auth/cancelled-popup-request': 'Một cửa sổ đăng nhập khác đang được mở. Vui lòng thử lại.',
+      'auth/popup-blocked': 'Trình duyệt đã chặn cửa sổ đăng nhập. Cho phép cửa sổ bật lên rồi thử lại.',
+      'auth/popup-closed-by-user': 'Cửa sổ đăng nhập đã bị đóng trước khi hoàn tất.',
+      'auth/operation-not-allowed': 'Firebase Authentication chưa bật phương thức đăng nhập bằng Google.',
+      'auth/unauthorized-domain': 'Tên miền hiện tại chưa được cho phép trong Firebase Authentication.',
+      'auth/network-request-failed': 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.'
+    };
+    showAuthError(messages[error.code] || 'Đăng nhập bằng Google thất bại. Vui lòng thử lại.');
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$('forgotPasswordButton').addEventListener('click', () => {
+  $('resetEmail').value = $('loginEmail').value.trim();
+  showAuthError('');
+  showAuthNotice('');
+  $('resetPasswordError').hidden = true;
+  $('resetPasswordNotice').hidden = true;
+  $('loginView').hidden = true;
+  $('forgotPasswordView').hidden = false;
+  $('resetEmail').focus();
+});
+
+$('backToLoginButton').addEventListener('click', () => {
+  $('forgotPasswordView').hidden = true;
+  $('loginView').hidden = false;
+  $('resetPasswordError').hidden = true;
+  $('resetPasswordNotice').hidden = true;
+  $('loginEmail').focus();
+});
+
+$('resetPasswordForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const email = $('resetEmail').value.trim();
+  const button = $('sendResetEmailButton');
+  $('resetPasswordError').textContent = '';
+  $('resetPasswordError').hidden = true;
+  $('resetPasswordNotice').textContent = '';
+  $('resetPasswordNotice').hidden = true;
+  button.disabled = true;
+  try {
+    await sendPasswordReset(email);
+    $('resetPasswordNotice').textContent = 'Nếu email này đã đăng ký, Firebase sẽ gửi liên kết đặt lại mật khẩu. Hãy kiểm tra hộp thư và thư rác.';
+    $('resetPasswordNotice').hidden = false;
+  } catch (error) {
+    console.error('Không thể gửi email đặt lại mật khẩu Firebase:', error);
+    const messages = {
+      'auth/invalid-email': 'Email không hợp lệ.',
+      'auth/too-many-requests': 'Đã yêu cầu quá nhiều lần. Vui lòng thử lại sau.',
+      'auth/network-request-failed': 'Không kết nối được Firebase. Kiểm tra mạng rồi thử lại.',
+      'auth/operation-not-allowed': 'Firebase Authentication chưa bật chức năng đặt lại mật khẩu.',
+      'auth/unauthorized-continue-uri': 'Tên miền ứng dụng chưa được cho phép trong Firebase Authentication.',
+      'auth/invalid-continue-uri': 'Đường dẫn đặt lại mật khẩu trong Firebase chưa hợp lệ.'
+    };
+    $('resetPasswordError').textContent = messages[error.code] || 'Không thể gửi email đặt lại mật khẩu. Vui lòng thử lại.';
+    $('resetPasswordError').hidden = false;
   } finally {
     button.disabled = false;
   }

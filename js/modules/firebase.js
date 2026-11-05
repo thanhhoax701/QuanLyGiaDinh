@@ -1,5 +1,5 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
 import { getDatabase, onValue, ref, set } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
 
 const firebaseConfig = {
@@ -24,6 +24,14 @@ export function observeAuth(callback, onError) {
 
 export function login(email, password) {
   return signInWithEmailAndPassword(auth, email, password);
+}
+
+export function loginWithGoogle() {
+  return signInWithPopup(auth, new GoogleAuthProvider());
+}
+
+export function sendPasswordReset(email) {
+  return sendPasswordResetEmail(auth, email);
 }
 
 export function logout() {
