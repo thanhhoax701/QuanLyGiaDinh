@@ -41,12 +41,14 @@ export function exportMonthlyReport(transactions, reportMonth) {
   const incomes = transactions.filter(transaction => transaction.type === 'income');
   const totalExpense = expenses.reduce((total, transaction) => total + Number(transaction.amount), 0);
   const totalIncome = incomes.reduce((total, transaction) => total + Number(transaction.amount), 0);
+  const totalDebtPayment = transactions.filter(transaction => transaction.type === 'debtPayment').reduce((total, transaction) => total + Number(transaction.amount), 0);
   const summary = [
     ['Tháng', reportMonth],
     ['Số giao dịch', transactions.length],
     ['Tổng thu nhập', totalIncome],
     ['Tổng chi tiêu', totalExpense],
-    ['Chênh lệch', totalIncome - totalExpense]
+    ['Chênh lệch', totalIncome - totalExpense],
+    ['Đã thanh toán nợ', totalDebtPayment]
   ];
   const summarySheet = XLSX.utils.aoa_to_sheet([['Chỉ tiêu', 'Giá trị'], ...summary]);
   summarySheet['!cols'] = [{ wch: 24 }, { wch: 24 }];
@@ -54,7 +56,7 @@ export function exportMonthlyReport(transactions, reportMonth) {
   const dailyTotals = new Map();
   transactions.forEach(transaction => {
     const date = transaction.date.slice(0, 10);
-    const daily = dailyTotals.get(date) || { date, count: 0, income: 0, expense: 0 };
+    const daily = dailyTotals.get(date) || { date, count: 0, income: 0, expense: 0, debtPayment: 0 };
     daily.count += 1;
     daily[transaction.type] += Number(transaction.amount);
     dailyTotals.set(date, daily);
@@ -64,9 +66,10 @@ export function exportMonthlyReport(transactions, reportMonth) {
     'Số giao dịch': day.count,
     'Tổng thu nhập': day.income,
     'Tổng chi tiêu': day.expense,
+    'Thanh toán nợ': day.debtPayment,
     'Chênh lệch': day.income - day.expense
   })));
-  dailySheet['!cols'] = [16, 16, 20, 20, 18].map(wch => ({ wch }));
+  dailySheet['!cols'] = [16, 16, 20, 20, 20, 18].map(wch => ({ wch }));
   XLSX.utils.book_append_sheet(workbook, dailySheet, 'Theo ngày');
   addTransactionSheet(workbook, transactions);
   XLSX.writeFile(workbook, `bao-cao-thang-${reportMonth}.xlsx`);
@@ -99,7 +102,7 @@ function normalizeDate(value, rowNumber) {
 
 function normalizeTransaction(row, rowNumber) {
   const typeValue = String(row['Loại giao dịch'] ?? '').trim().toLowerCase();
-  const type = typeValue === 'expense' || typeValue === 'chi tiêu' ? 'expense' : typeValue === 'income' || typeValue === 'thu nhập' ? 'income' : '';
+  const type = typeValue === 'expense' || typeValue === 'chi tiêu' ? 'expense' : typeValue === 'income' || typeValue === 'thu nhập' ? 'income' : typeValue === 'debtpayment' || typeValue === 'thanh toán nợ' || typeValue === 'xóa nợ' ? 'debtPayment' : '';
   const title = String(row['Nội dung'] ?? '').trim();
   const category = String(row['Danh mục'] ?? '').trim();
   const personValue = String(row['Người thực hiện'] ?? '').trim();

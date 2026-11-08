@@ -111,7 +111,8 @@
             /><select id="reportTypeFilter">
               <option value="all">Tất cả loại giao dịch</option>
               <option value="expense">Chi tiêu</option>
-              <option value="income">Thu nhập</option></select
+              <option value="income">Thu nhập</option>
+              <option value="debtPayment">Thanh toán nợ</option></select
             ><select id="reportCategoryFilter">
               <option value="all">Tất cả danh mục</option></select
             ><select id="reportPersonFilter">
@@ -211,6 +212,7 @@
               </div>
               <div class="file-actions">
                 <input type="month" class="pill" id="reportMonth" />
+                <button class="btn secondary" id="reportDebtPaymentBtn" type="button">＋ Xóa nợ</button>
                 <button class="btn secondary" id="importReportBtn" type="button">Nhập Excel</button>
                 <button class="btn secondary" id="exportReportBtn" type="button">Xuất Excel</button>
               </div>
@@ -250,6 +252,10 @@
                     <span>Nợ trong tháng</span
                     ><strong class="red" id="reportHusbandDebt">0 ₫</strong>
                   </div>
+                  <div class="report-card">
+                    <span>Nợ còn lại đến <span id="reportDebtAsOfDate"></span></span
+                    ><strong class="red" id="reportHusbandDebtBalance">0 ₫</strong>
+                  </div>
                 </div>
               </div>
             </details>
@@ -271,6 +277,27 @@
                   </tr>
                 </thead>
                 <tbody id="reportRows"></tbody>
+              </table>
+            </div>
+            <div class="panel-title top-gap">
+              <div>
+                <h2>Lịch sử xóa nợ</h2>
+                <p>Các khoản thanh toán trong tháng đang chọn</p>
+              </div>
+              <span class="eyebrow" id="debtPaymentHistoryTotal">0 lần · 0 ₫</span>
+            </div>
+            <div class="table-wrap">
+              <table class="debt-payment-history">
+                <thead>
+                  <tr>
+                    <th>Ngày thanh toán</th>
+                    <th>Số tiền đã xóa</th>
+                    <th>Nợ còn lại sau khi xóa</th>
+                    <th>Ghi chú</th>
+                    <th>Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="debtPaymentHistoryRows"></tbody>
               </table>
             </div>
           </div>
@@ -409,6 +436,36 @@
             <button type="button" class="btn secondary" id="cancelModal">
               Hủy</button
             ><button class="btn" type="submit">Lưu giao dịch</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="modal-backdrop" id="debtPaymentBackdrop">
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="debtPaymentTitle">
+        <div class="modal-head">
+          <h2 id="debtPaymentTitle">Ghi nhận xóa nợ</h2>
+          <button class="close" id="closeDebtPaymentModal" type="button" aria-label="Đóng">✕</button>
+        </div>
+        <form id="debtPaymentForm">
+          <p class="eyebrow">Nhập số tiền đã trả để giảm nợ lũy kế từ ngày thanh toán. Khoản này không tính vào thu nhập, chi tiêu hay hạn mức ngày.</p>
+          <div class="field">
+            <label for="debtPaymentDate">Ngày thanh toán *</label>
+            <input id="debtPaymentDate" type="date" required />
+          </div>
+          <div class="field">
+            <label for="debtPaymentAmount">Số tiền đã trả (VNĐ) *</label>
+            <input id="debtPaymentAmount" type="number" min="1" step="1" required placeholder="895000" />
+            <div class="eyebrow" id="debtPaymentBalance">Nợ còn lại: 0 ₫</div>
+            <button class="btn secondary" id="fillDebtPaymentAmount" type="button">Điền toàn bộ số nợ</button>
+          </div>
+          <div class="field">
+            <label for="debtPaymentNote">Ghi chú</label>
+            <input id="debtPaymentNote" placeholder="Ví dụ: Thanh toán nợ tính đến ngày 06/11" />
+          </div>
+          <p class="auth-error" id="debtPaymentError" role="alert" hidden></p>
+          <div class="modal-actions">
+            <button type="button" class="btn secondary" id="cancelDebtPayment">Hủy</button>
+            <button class="btn" type="submit">Lưu khoản xóa nợ</button>
           </div>
         </form>
       </div>

@@ -1,6 +1,6 @@
 import { $, currentMonth, dateKey, loadTransactions, saveTransactions, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './modules/data.js';
 import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
-import { renderReports } from './modules/reports.js';
+import { getHusbandDebtBalance, renderReports } from './modules/reports.js';
 import { getFilteredTransactions, renderDailySummary } from './modules/transactions.js';
 import { openModal, closeModal, fillCategories } from './modules/modal.js';
 import { initNavigation } from './modules/navigation.js';
@@ -71,7 +71,10 @@ async function persist(message) {
 
 function deleteTransaction(id) {
   const transaction = transactions.find(item => item.id === id);
-  if (transaction && confirm(`Xóa giao dịch "${transaction.title}"?`)) {
+  const prompt = transaction?.type === 'debtPayment'
+    ? `Xóa khoản thanh toán nợ ${new Intl.NumberFormat('vi-VN').format(transaction.amount)} ₫? Nợ lũy kế sẽ được tính lại.`
+    : `Xóa giao dịch "${transaction?.title}"?`;
+  if (transaction && confirm(prompt)) {
     transactions = transactions.filter(item => item.id !== id);
     void persist('Đã xóa giao dịch');
   }
@@ -252,6 +255,66 @@ $('modalBackdrop').addEventListener('click', event => {
 });
 $('txType').addEventListener('change', () => fillCategories());
 
+function updateDebtPaymentBalance() {
+  const day = $('debtPaymentDate').value;
+  const balance = day ? getHusbandDebtBalance(transactions, day) : 0;
+  $('debtPaymentBalance').textContent = `Nợ còn lại tính đến ngày ${day ? day.split('-').reverse().join('/') : 'đã chọn'}: ${new Intl.NumberFormat('vi-VN').format(balance)} ₫`;
+  $('debtPaymentAmount').max = String(balance);
+  $('fillDebtPaymentAmount').disabled = balance < 1;
+  $('debtPaymentError').hidden = true;
+  return balance;
+}
+
+$('reportDebtPaymentBtn').addEventListener('click', () => {
+  $('debtPaymentForm').reset();
+  $('debtPaymentDate').value = dateKey(new Date());
+  $('debtPaymentError').hidden = true;
+  updateDebtPaymentBalance();
+  $('debtPaymentBackdrop').classList.add('show');
+});
+function closeDebtPaymentModal() {
+  $('debtPaymentBackdrop').classList.remove('show');
+}
+$('closeDebtPaymentModal').addEventListener('click', closeDebtPaymentModal);
+$('cancelDebtPayment').addEventListener('click', closeDebtPaymentModal);
+$('debtPaymentBackdrop').addEventListener('click', event => {
+  if (event.target === $('debtPaymentBackdrop')) closeDebtPaymentModal();
+});
+$('debtPaymentDate').addEventListener('change', updateDebtPaymentBalance);
+$('fillDebtPaymentAmount').addEventListener('click', () => {
+  $('debtPaymentAmount').value = updateDebtPaymentBalance();
+});
+$('debtPaymentForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const date = $('debtPaymentDate').value;
+  const amount = Number($('debtPaymentAmount').value);
+  const balance = updateDebtPaymentBalance();
+  if (!Number.isSafeInteger(amount) || amount < 1) {
+    $('debtPaymentError').textContent = 'Vui lòng nhập số tiền thanh toán hợp lệ.';
+    $('debtPaymentError').hidden = false;
+    return;
+  }
+  if (amount > balance) {
+    $('debtPaymentError').textContent = `Số tiền thanh toán không thể lớn hơn số nợ ${new Intl.NumberFormat('vi-VN').format(balance)} ₫ tính đến ngày đã chọn.`;
+    $('debtPaymentError').hidden = false;
+    return;
+  }
+  transactions.push({
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    type: 'debtPayment',
+    date: `${date}T12:00`,
+    title: 'Thanh toán nợ hạn mức',
+    amount,
+    category: 'Xóa nợ',
+    person: 'Chồng',
+    fund: 'Tiền chung',
+    note: $('debtPaymentNote').value.trim(),
+    details: ''
+  });
+  closeDebtPaymentModal();
+  void persist('Đã ghi nhận thanh toán nợ');
+});
+
 $('transactionForm').addEventListener('submit', event => {
   event.preventDefault();
   const id = $('txId').value || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
@@ -332,7 +395,7 @@ $('excelFileInput').addEventListener('change', async event => {
   }
 });
 $('reportCategoryFilter').innerHTML = '<option value="all">Tất cả danh mục</option>' +
-  [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES].map(category => `<option>${category}</option>`).join('');
+  [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES, 'Xóa nợ'].map(category => `<option>${category}</option>`).join('');
 
 $('saveSettings').onclick = () => {
   const name = $('familyName').value.trim() || 'Gia Đình';
