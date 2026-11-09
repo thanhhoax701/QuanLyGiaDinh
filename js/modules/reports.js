@@ -1,11 +1,11 @@
 import { $, COLORS, DAILY_HUSBAND_ALLOWANCE, dateKey, monthKey, money, sum, expenses, incomes, txDate, escapeHTML } from './data.js';
 import { getFilteredTransactions, renderRows } from './transactions.js';
 
-function calculateHusbandDebtByDay(transactions, throughDay) {
+function calculateDailyLimitDebtByDay(transactions, throughDay) {
     const spendingByDay = {}, paymentsByDay = {};
     transactions.forEach(transaction => {
         const day = dateKey(txDate(transaction));
-        if (transaction.type === 'expense' && transaction.person === 'Chồng') spendingByDay[day] = (spendingByDay[day] || 0) + Number(transaction.amount);
+        if (transaction.type === 'expense') spendingByDay[day] = (spendingByDay[day] || 0) + Number(transaction.amount);
         if (transaction.type === 'debtPayment') paymentsByDay[day] = (paymentsByDay[day] || 0) + Number(transaction.amount);
     });
     const expenseDays = Object.keys(spendingByDay).sort();
@@ -15,7 +15,7 @@ function calculateHusbandDebtByDay(transactions, throughDay) {
     const date = new Date(`${expenseDays[0]}T12:00:00`), lastDate = new Date(`${throughDay}T12:00:00`);
     while (date <= lastDate) {
         const day = dateKey(date), spent = spendingByDay[day] || 0;
-        debtBalance += Math.max(spent - DAILY_HUSBAND_ALLOWANCE, 0);
+        if (spent) debtBalance = Math.max(debtBalance + spent - DAILY_HUSBAND_ALLOWANCE, 0);
         debtBalance = Math.max(debtBalance - (paymentsByDay[day] || 0), 0);
         balances.set(day, debtBalance);
         date.setDate(date.getDate() + 1);
@@ -23,8 +23,8 @@ function calculateHusbandDebtByDay(transactions, throughDay) {
     return balances;
 }
 
-export function getHusbandDebtBalance(transactions, throughDay) {
-    const balances = calculateHusbandDebtByDay(transactions, throughDay);
+export function getDailyLimitDebtBalance(transactions, throughDay) {
+    const balances = calculateDailyLimitDebtByDay(transactions, throughDay);
     return balances.get(throughDay) || 0;
 }
 
@@ -32,7 +32,7 @@ function calculateDebtPaymentBalances(transactions) {
     const spendingByDay = {}, paymentsByDay = {};
     transactions.forEach(transaction => {
         const day = dateKey(txDate(transaction));
-        if (transaction.type === 'expense' && transaction.person === 'Chồng') spendingByDay[day] = (spendingByDay[day] || 0) + Number(transaction.amount);
+        if (transaction.type === 'expense') spendingByDay[day] = (spendingByDay[day] || 0) + Number(transaction.amount);
         if (transaction.type === 'debtPayment') (paymentsByDay[day] ||= []).push(transaction);
     });
     const days = [...new Set([...Object.keys(spendingByDay), ...Object.keys(paymentsByDay)])].sort();
@@ -42,7 +42,7 @@ function calculateDebtPaymentBalances(transactions) {
     const date = new Date(`${days[0]}T12:00:00`), lastDate = new Date(`${days[days.length - 1]}T12:00:00`);
     while (date <= lastDate) {
         const day = dateKey(date), spent = spendingByDay[day] || 0;
-        debtBalance += Math.max(spent - DAILY_HUSBAND_ALLOWANCE, 0);
+        if (spent) debtBalance = Math.max(debtBalance + spent - DAILY_HUSBAND_ALLOWANCE, 0);
         (paymentsByDay[day] || []).slice().sort((a, b) => a.date.localeCompare(b.date)).forEach(payment => {
             debtBalance = Math.max(debtBalance - Number(payment.amount), 0);
             balances.set(payment, debtBalance);
@@ -53,37 +53,37 @@ function calculateDebtPaymentBalances(transactions) {
 }
 
 function renderMonthlyReport(transactions) {
-    const month = getFilteredTransactions(transactions), ex = expenses(month), inc = incomes(month), now = new Date(), currentMonthKey = monthKey(now), reportMonth = $('reportMonth').value || currentMonthKey, [year, monthNumber] = reportMonth.split('-').map(Number), monthDayCount = new Date(year, monthNumber, 0).getDate(), lastDayToShow = reportMonth === currentMonthKey ? now.getDate() : reportMonth < currentMonthKey ? monthDayCount : 0, days = Array.from({ length: lastDayToShow }, (_, index) => `${reportMonth}-${String(index + 1).padStart(2, '0')}`), asOfDay = lastDayToShow ? days[days.length - 1] : dateKey(now), debtByDay = calculateHusbandDebtByDay(transactions, asOfDay);
-    let husbandRemainingTotal = 0, husbandDebtTotal = 0, husbandSpentTotal = 0;
-    const husbandSpendingByDay = {}, husbandPaymentsByDay = {};
+    const month = getFilteredTransactions(transactions), ex = expenses(month), inc = incomes(month), now = new Date(), currentMonthKey = monthKey(now), reportMonth = $('reportMonth').value || currentMonthKey, [year, monthNumber] = reportMonth.split('-').map(Number), monthDayCount = new Date(year, monthNumber, 0).getDate(), lastDayToShow = reportMonth === currentMonthKey ? now.getDate() : reportMonth < currentMonthKey ? monthDayCount : 0, days = Array.from({ length: lastDayToShow }, (_, index) => `${reportMonth}-${String(index + 1).padStart(2, '0')}`), asOfDay = lastDayToShow ? days[days.length - 1] : dateKey(now), debtByDay = calculateDailyLimitDebtByDay(transactions, asOfDay);
+    let dailyLimitRemainingTotal = 0, dailyLimitDebtTotal = 0, dailyLimitSpentTotal = 0;
+    const dailyLimitSpendingByDay = {}, dailyLimitPaymentsByDay = {};
     transactions.forEach(t => {
         const day = dateKey(txDate(t));
-        if (t.type === 'expense' && t.person === 'Chồng') husbandSpendingByDay[day] = (husbandSpendingByDay[day] || 0) + Number(t.amount);
-        if (t.type === 'debtPayment') husbandPaymentsByDay[day] = (husbandPaymentsByDay[day] || 0) + Number(t.amount);
+        if (t.type === 'expense') dailyLimitSpendingByDay[day] = (dailyLimitSpendingByDay[day] || 0) + Number(t.amount);
+        if (t.type === 'debtPayment') dailyLimitPaymentsByDay[day] = (dailyLimitPaymentsByDay[day] || 0) + Number(t.amount);
     });
-    const husbandDebtByDay = {};
-    const firstDay = Object.keys(debtByDay)[0];
+    const dailyLimitDebtByDay = {};
+    const firstDay = debtByDay.keys().next().value;
     if (firstDay) {
         const date = new Date(`${firstDay}T12:00:00`), lastDate = new Date(`${asOfDay}T12:00:00`);
         while (date <= lastDate) {
-            const day = dateKey(date), spent = husbandSpendingByDay[day] || 0, dailyDebt = Math.max(spent - DAILY_HUSBAND_ALLOWANCE, 0), remaining = Math.max(DAILY_HUSBAND_ALLOWANCE - spent, 0);
+            const day = dateKey(date), spent = dailyLimitSpendingByDay[day] || 0, dailyDebt = Math.max(spent - DAILY_HUSBAND_ALLOWANCE, 0), remaining = Math.max(DAILY_HUSBAND_ALLOWANCE - spent, 0);
             if (monthKey(date) === reportMonth) {
-                husbandSpentTotal += spent;
-                husbandRemainingTotal += remaining;
-                husbandDebtTotal += dailyDebt;
-                husbandDebtByDay[day] = { spent, remaining, dailyDebt, debtTotal: debtByDay.get(day) || 0, paid: husbandPaymentsByDay[day] || 0 };
+                dailyLimitSpentTotal += spent;
+                dailyLimitRemainingTotal += remaining;
+                dailyLimitDebtTotal += dailyDebt;
+                dailyLimitDebtByDay[day] = { spent, remaining, dailyDebt, debtTotal: debtByDay.get(day) || 0, paid: dailyLimitPaymentsByDay[day] || 0 };
             }
             date.setDate(date.getDate() + 1);
         }
     }
-    days.forEach(day => { husbandDebtByDay[day] ||= { spent: 0, remaining: DAILY_HUSBAND_ALLOWANCE, dailyDebt: 0, debtTotal: debtByDay.get(day) || 0, paid: husbandPaymentsByDay[day] || 0 } });
-    $('reportIncome').textContent = money(sum(inc)); $('reportExpense').textContent = money(sum(ex)); $('reportBalance').textContent = money(sum(inc) - sum(ex)); $('reportHusbandSpent').textContent = money(husbandSpentTotal); $('reportHusbandRemaining').textContent = money(husbandRemainingTotal); $('reportHusbandDebt').textContent = money(husbandDebtTotal); $('reportHusbandDebtBalance').textContent = money(getHusbandDebtBalance(transactions, asOfDay)); $('reportDebtAsOfDate').textContent = asOfDay.split('-').reverse().join('/'); $('reportRowCount').textContent = `${month.length} giao dịch`;
+    days.forEach(day => { dailyLimitDebtByDay[day] ||= { spent: 0, remaining: DAILY_HUSBAND_ALLOWANCE, dailyDebt: 0, debtTotal: debtByDay.get(day) || 0, paid: dailyLimitPaymentsByDay[day] || 0 } });
+    $('reportIncome').textContent = money(sum(inc)); $('reportExpense').textContent = money(sum(ex)); $('reportBalance').textContent = money(sum(inc) - sum(ex)); $('reportDailyLimitSpent').textContent = money(dailyLimitSpentTotal); $('reportDailyLimitRemaining').textContent = money(dailyLimitRemainingTotal); $('reportDailyLimitDebt').textContent = money(dailyLimitDebtTotal); $('reportDailyLimitDebtBalance').textContent = money(getDailyLimitDebtBalance(transactions, asOfDay)); $('reportDebtAsOfDate').textContent = asOfDay.split('-').reverse().join('/'); $('reportRowCount').textContent = `${month.length} giao dịch`;
     const dailyGroups = {};
     month.forEach(t => { const key = dateKey(txDate(t)); (dailyGroups[key] ??= []).push(t) });
     $('reportRows').innerHTML = days.filter(day => !$('reportDateFilter').value || day === $('reportDateFilter').value).reverse().map(day => {
-        const daily = dailyGroups[day] || [], date = day.split('-').reverse().join('/'), husbandDebt = husbandDebtByDay[day];
-        const debtPaymentTooltip = husbandDebt.paid > 0 ? ` title="Đã xóa nợ: ${money(husbandDebt.paid)}" class="report-day-debt-total has-debt-payment"` : ' class="report-day-debt-total"';
-        return `<tr class="report-day-row"><td colspan="7"><details class="report-day"><summary><span class="report-day-date">${date}</span><span class="report-day-count">${daily.length} giao dịch</span><span class="report-day-total"><span class="report-day-spent">Chi ngày ${money(husbandDebt.spent)}</span><span class="report-day-daily-debt">Nợ ngày ${money(husbandDebt.dailyDebt)}</span><span class="report-day-remaining">Dư của ngày ${money(husbandDebt.remaining)}</span><span${debtPaymentTooltip}>Nợ cuối ${money(husbandDebt.debtTotal)}</span></span></summary><div class="table-wrap"><table><thead><tr><th>Ngày giờ</th><th>Nội dung</th><th>Danh mục</th><th>Số tiền</th><th>Người thực hiện</th><th>Nguồn tiền</th><th>Thao tác</th></tr></thead><tbody>${daily.length ? renderRows(daily, { mobileDetails: true }) : '<tr><td colspan="7" class="empty">Không có giao dịch trong ngày này.</td></tr>'}</tbody></table></div></details></td></tr>`;
+        const daily = dailyGroups[day] || [], date = day.split('-').reverse().join('/'), dailyLimit = dailyLimitDebtByDay[day];
+        const debtPaymentTooltip = dailyLimit.paid > 0 ? ` title="Đã xóa nợ: ${money(dailyLimit.paid)}" class="report-day-debt-total has-debt-payment"` : ' class="report-day-debt-total"';
+        return `<tr class="report-day-row"><td colspan="7"><details class="report-day"><summary><span class="report-day-date">${date}</span><span class="report-day-count">${daily.length} giao dịch</span><span class="report-day-total"><span class="report-day-spent">Chi ngày ${money(dailyLimit.spent)}</span><span class="report-day-daily-debt">Nợ ngày ${money(dailyLimit.dailyDebt)}</span><span class="report-day-remaining">Dư của ngày ${money(dailyLimit.remaining)}</span><span${debtPaymentTooltip}>Nợ cuối ${money(dailyLimit.debtTotal)}</span></span></summary><div class="table-wrap"><table><thead><tr><th>Ngày giờ</th><th>Nội dung</th><th>Danh mục</th><th>Số tiền</th><th>Người thực hiện</th><th>Nguồn tiền</th><th>Thao tác</th></tr></thead><tbody>${daily.length ? renderRows(daily, { mobileDetails: true }) : '<tr><td colspan="7" class="empty">Không có giao dịch trong ngày này.</td></tr>'}</tbody></table></div></details></td></tr>`;
     }).join('') || '<tr><td colspan="7" class="empty">Không có ngày phù hợp bộ lọc.</td></tr>';
     renderDebtPaymentHistory(transactions, reportMonth);
 }

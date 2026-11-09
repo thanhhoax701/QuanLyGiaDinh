@@ -1,6 +1,6 @@
 import { $, currentMonth, dateKey, loadTransactions, saveTransactions, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './modules/data.js';
 import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
-import { getHusbandDebtBalance, renderReports } from './modules/reports.js';
+import { getDailyLimitDebtBalance, renderReports } from './modules/reports.js';
 import { getFilteredTransactions, renderDailySummary } from './modules/transactions.js';
 import { openModal, closeModal, fillCategories } from './modules/modal.js';
 import { initNavigation } from './modules/navigation.js';
@@ -257,7 +257,7 @@ $('txType').addEventListener('change', () => fillCategories());
 
 function updateDebtPaymentBalance() {
   const day = $('debtPaymentDate').value;
-  const balance = day ? getHusbandDebtBalance(transactions, day) : 0;
+  const balance = day ? getDailyLimitDebtBalance(transactions, day) : 0;
   $('debtPaymentBalance').textContent = `Nợ còn lại tính đến ngày ${day ? day.split('-').reverse().join('/') : 'đã chọn'}: ${new Intl.NumberFormat('vi-VN').format(balance)} ₫`;
   $('debtPaymentAmount').max = String(balance);
   $('fillDebtPaymentAmount').disabled = balance < 1;
