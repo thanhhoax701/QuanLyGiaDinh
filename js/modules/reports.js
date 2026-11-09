@@ -15,7 +15,7 @@ function calculateHusbandDebtByDay(transactions, throughDay) {
     const date = new Date(`${expenseDays[0]}T12:00:00`), lastDate = new Date(`${throughDay}T12:00:00`);
     while (date <= lastDate) {
         const day = dateKey(date), spent = spendingByDay[day] || 0;
-        if (spent) debtBalance = Math.max(debtBalance + spent - DAILY_HUSBAND_ALLOWANCE, 0);
+        debtBalance += Math.max(spent - DAILY_HUSBAND_ALLOWANCE, 0);
         debtBalance = Math.max(debtBalance - (paymentsByDay[day] || 0), 0);
         balances.set(day, debtBalance);
         date.setDate(date.getDate() + 1);
@@ -42,7 +42,7 @@ function calculateDebtPaymentBalances(transactions) {
     const date = new Date(`${days[0]}T12:00:00`), lastDate = new Date(`${days[days.length - 1]}T12:00:00`);
     while (date <= lastDate) {
         const day = dateKey(date), spent = spendingByDay[day] || 0;
-        if (spent) debtBalance = Math.max(debtBalance + spent - DAILY_HUSBAND_ALLOWANCE, 0);
+        debtBalance += Math.max(spent - DAILY_HUSBAND_ALLOWANCE, 0);
         (paymentsByDay[day] || []).slice().sort((a, b) => a.date.localeCompare(b.date)).forEach(payment => {
             debtBalance = Math.max(debtBalance - Number(payment.amount), 0);
             balances.set(payment, debtBalance);
