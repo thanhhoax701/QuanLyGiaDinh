@@ -1,17 +1,25 @@
-import { $, currentMonth, loadTransactions, saveTransactions } from './modules/data.js';
-import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
+import { $, currentMonth, dateKey, loadTransactions, saveTransactions, loadGoldPurchases, saveGoldPurchases, loadGoldContributions, saveGoldContributions } from './modules/data.js';
+import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions, observeGoldPurchases, writeGoldPurchases, observeGoldContributions, writeGoldContributions, writeGoldContribution } from './modules/firebase.js';
 import { getDailyLimitDebtBalance, renderReports } from './modules/reports.js';
 import { getFilteredTransactions } from './modules/transactions.js';
+import { renderGoldFund } from './modules/gold.js';
 import { openModal, closeModal, fillCategories } from './modules/modal.js';
 import { initNavigation } from './modules/navigation.js';
 import { exportMonthlyReport, readTransactionsFile } from './modules/excel.js';
 
 let transactions = loadTransactions();
+let goldPurchases = loadGoldPurchases();
+let goldContributions = loadGoldContributions();
 let cloudReady = false;
+let goldCloudReady = false;
+let goldContributionsCloudReady = false;
 let stopTransactionListener;
+let stopGoldPurchaseListener;
+let stopGoldContributionListener;
 
 function render() {
   renderReports(transactions);
+  renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
 }
 
 function toast(message) {
@@ -68,6 +76,42 @@ async function persist(message) {
   }
 }
 
+async function persistGoldPurchases(message) {
+  saveGoldPurchases(goldPurchases);
+  renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+  if (!goldCloudReady) {
+    toast('Firebase chưa sẵn sàng; quỹ vàng chỉ được lưu trên thiết bị này.');
+    return;
+  }
+  try {
+    await writeGoldPurchases(goldPurchases);
+    if (message) toast(message);
+  } catch (error) {
+    console.error('Không thể lưu quỹ vàng lên Firebase:', error);
+    toast('Lưu quỹ vàng lên Firebase thất bại. Dữ liệu vẫn còn trên thiết bị này.');
+  }
+}
+
+async function persistGoldContribution(contribution) {
+  saveGoldContributions(goldContributions);
+  renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+  if (!goldContributionsCloudReady) {
+    toast('Firebase chưa sẵn sàng; khoản tích góp chỉ được lưu trên thiết bị này.');
+    return;
+  }
+  try {
+    await writeGoldContribution(contribution);
+  } catch (error) {
+    console.error('Không thể lưu khoản tích góp lên Firebase:', error);
+    if (error.code === 'PERMISSION_DENIED') {
+      toast('Firebase từ chối quyền ghi (PERMISSION_DENIED). Hãy publish Database Rules cho nhánh households/quanlygiadinh-94ced.');
+      return;
+    }
+    const reason = error.code || error.message || 'không rõ nguyên nhân';
+    toast(`Lưu Firebase thất bại (${reason}). Dữ liệu vẫn còn trên thiết bị này.`);
+  }
+}
+
 function deleteTransaction(id) {
   const transaction = transactions.find(item => item.id === id);
   const prompt = transaction?.type === 'debtPayment'
@@ -79,11 +123,111 @@ function deleteTransaction(id) {
   }
 }
 
+function startGoldPurchaseSync() {
+  stopGoldPurchaseListener?.();
+  goldCloudReady = false;
+  $('goldPurchaseSubmit').disabled = true;
+  let firstSnapshot = true;
+  stopGoldPurchaseListener = observeGoldPurchases(async remotePurchases => {
+    if (firstSnapshot) {
+      firstSnapshot = false;
+      if (remotePurchases === null) {
+        const localPurchases = loadGoldPurchases();
+        if (localPurchases.length && confirm(`Tìm thấy ${localPurchases.length} giao dịch mua vàng cũ trên thiết bị này. Tải lên Firebase để dùng chung?`)) {
+          goldPurchases = localPurchases;
+          goldCloudReady = true;
+          $('goldPurchaseSubmit').disabled = false;
+          await persistGoldPurchases('Đã chuyển quỹ vàng lên Firebase');
+          return;
+        }
+        goldPurchases = [];
+      } else {
+        goldPurchases = remotePurchases;
+      }
+      saveGoldPurchases(goldPurchases);
+      goldCloudReady = true;
+      $('goldPurchaseSubmit').disabled = false;
+      renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+      return;
+    }
+
+    goldPurchases = remotePurchases || [];
+    saveGoldPurchases(goldPurchases);
+    renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+  }, error => {
+    goldCloudReady = false;
+    $('goldPurchaseSubmit').disabled = true;
+    console.error('Không thể đồng bộ quỹ vàng qua Firebase:', error);
+    toast(error.code === 'PERMISSION_DENIED'
+      ? 'Firebase từ chối quyền truy cập quỹ vàng. Kiểm tra Database Rules.'
+      : 'Không thể đồng bộ quỹ vàng. Kiểm tra kết nối rồi thử lại.');
+  });
+}
+
+function startGoldContributionSync() {
+  stopGoldContributionListener?.();
+  goldContributionsCloudReady = false;
+  renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+  let firstSnapshot = true;
+  stopGoldContributionListener = observeGoldContributions(async remoteContributions => {
+    if (firstSnapshot) {
+      firstSnapshot = false;
+      if (remoteContributions === null) {
+        const localContributions = loadGoldContributions();
+        if (localContributions.length) {
+          if (!confirm(`Tìm thấy danh sách tích góp cũ trên thiết bị này (${localContributions.length} tháng). Tải lên Firebase để dùng chung?`)) {
+            goldContributions = localContributions;
+            saveGoldContributions(goldContributions);
+            stopGoldContributionListener?.();
+            stopGoldContributionListener = undefined;
+            renderGoldFund(goldPurchases, goldContributions, false);
+            toast('Danh sách cũ được giữ trên thiết bị này; đăng nhập lại để đồng bộ.');
+            return;
+          }
+          goldContributions = localContributions;
+          saveGoldContributions(goldContributions);
+          goldContributionsCloudReady = true;
+          try {
+            await writeGoldContributions(goldContributions);
+          } catch (error) {
+            goldContributionsCloudReady = false;
+            renderGoldFund(goldPurchases, goldContributions, false);
+            console.error('Không thể tải danh sách tích góp cũ lên Firebase:', error);
+            toast('Không thể chuyển danh sách tích góp lên Firebase. Dữ liệu cũ vẫn còn trên thiết bị này.');
+            return;
+          }
+        } else {
+          goldContributions = [];
+        }
+      } else {
+        goldContributions = remoteContributions;
+      }
+      saveGoldContributions(goldContributions);
+      goldContributionsCloudReady = true;
+      renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+      return;
+    }
+
+    goldContributions = remoteContributions || [];
+    saveGoldContributions(goldContributions);
+    renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+  }, error => {
+    goldContributionsCloudReady = false;
+    renderGoldFund(goldPurchases, goldContributions, false);
+    console.error('Không thể đồng bộ danh sách tích góp qua Firebase:', error);
+    toast(error.code === 'PERMISSION_DENIED'
+      ? 'Firebase từ chối quyền truy cập danh sách tích góp. Kiểm tra Database Rules.'
+      : 'Không thể đồng bộ danh sách tích góp. Kiểm tra kết nối rồi thử lại.');
+  });
+}
+
 function startTransactionSync(user) {
   stopTransactionListener?.();
   cloudReady = false;
   showApp(user);
   render();
+  startGoldPurchaseSync();
+  startGoldContributionSync();
   let firstSnapshot = true;
   stopTransactionListener = observeTransactions(async remoteTransactions => {
     if (firstSnapshot) {
@@ -126,6 +270,7 @@ document.addEventListener('click', event => {
   const duplicate = event.target.closest('[data-duplicate]');
   const edit = event.target.closest('[data-edit]');
   const del = event.target.closest('[data-delete]');
+  const deleteGold = event.target.closest('[data-delete-gold]');
   if (duplicate) {
     const transaction = transactions.find(item => item.id === duplicate.dataset.duplicate);
     if (transaction) openModal(transaction, true);
@@ -135,6 +280,92 @@ document.addEventListener('click', event => {
     if (transaction) openModal(transaction);
   }
   if (del) deleteTransaction(del.dataset.delete);
+  if (deleteGold) {
+    if (!goldCloudReady) {
+      toast('Đang tải dữ liệu quỹ vàng. Vui lòng thử lại sau.');
+      return;
+    }
+    const purchase = goldPurchases.find(item => item.id === deleteGold.dataset.deleteGold);
+    if (purchase && confirm(`Xóa giao dịch mua ${Number(purchase.quantity).toLocaleString('vi-VN')} chỉ vàng?`)) {
+      goldPurchases = goldPurchases.filter(item => item.id !== purchase.id);
+      void persistGoldPurchases('Đã xóa giao dịch mua vàng');
+    }
+  }
+});
+
+$('goldContributionRows').addEventListener('change', event => {
+  const input = event.target.closest('[data-contribution]');
+  if (!input) return;
+  if (!goldContributionsCloudReady) {
+    toast('Đang tải danh sách tích góp. Vui lòng thử lại sau.');
+    renderGoldFund(goldPurchases, goldContributions, false);
+    return;
+  }
+  const { month, contribution: field } = input.dataset;
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
+  const amountFields = [
+    'thanhHoaKpi', 'thanhHoaSalary', 'thanhHoaTarget',
+    'ngocYenKpi', 'ngocYenSalary', 'ngocYenTarget',
+    'cash', 'fund', 'pig', 'extra', 'debt'
+  ];
+  if (!amountFields.includes(field) && field !== 'purchaseDate' && field !== 'status') return;
+  const current = goldContributions.find(item => item.id === month);
+  const contribution = current
+    ? { ...current }
+    : {
+      id: month,
+      thanhHoaKpi: 0,
+      thanhHoaSalary: 0,
+      thanhHoaTarget: 0,
+      ngocYenKpi: 0,
+      ngocYenSalary: 0,
+      ngocYenTarget: 0,
+      cash: 0,
+      fund: 0,
+      pig: 0,
+      extra: 0,
+      debt: 0,
+      purchaseDate: '',
+      status: 'CHƯA MUA'
+    };
+
+  if (field === 'status') {
+    if (!['CHƯA MUA', 'ĐÃ GÓP', 'ĐÃ MUA'].includes(input.value)) return;
+    if (input.value === 'ĐÃ MUA' && !contribution.purchaseDate) {
+      toast('Nhập ngày mua trước khi chọn trạng thái ĐÃ MUA.');
+      renderGoldFund(goldPurchases, goldContributions, true);
+      return;
+    }
+    contribution.status = input.value;
+  } else if (field === 'purchaseDate') {
+    if (input.value && input.value > dateKey(new Date())) {
+      toast('Ngày mua không thể ở tương lai.');
+      renderGoldFund(goldPurchases, goldContributions, true);
+      return;
+    }
+    if (!input.value && contribution.status === 'ĐÃ MUA') {
+      toast('Đổi trạng thái khỏi ĐÃ MUA trước khi xóa ngày mua.');
+      renderGoldFund(goldPurchases, goldContributions, true);
+      return;
+    }
+    contribution.purchaseDate = input.value;
+  } else {
+    const digits = input.value.replace(/\D/g, '');
+    const amount = digits ? Number(digits) : 0;
+    if (!Number.isSafeInteger(amount)) {
+      toast('Số tiền vượt quá giới hạn cho phép.');
+      renderGoldFund(goldPurchases, goldContributions, true);
+      return;
+    }
+    contribution[field] = amount;
+  }
+
+  if (current) {
+    goldContributions = goldContributions.map(item => item.id === month ? contribution : item);
+  } else {
+    goldContributions = [...goldContributions, contribution];
+  }
+  void persistGoldContribution(contribution);
 });
 
 $('loginForm').addEventListener('submit', async event => {
@@ -339,6 +570,34 @@ $('transactionForm').addEventListener('submit', event => {
 
 $('reportMonth').value = currentMonth;
 $('reportMonth').addEventListener('change', render);
+$('goldPurchaseDate').value = dateKey(new Date());
+$('goldPurchaseDate').max = dateKey(new Date());
+$('goldPurchaseForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (!goldCloudReady) {
+    toast('Đang tải dữ liệu quỹ vàng. Vui lòng thử lại sau.');
+    return;
+  }
+  const date = $('goldPurchaseDate').value;
+  if (!date || date > dateKey(new Date())) {
+    toast('Ngày mua vàng không thể ở tương lai.');
+    return;
+  }
+  const quantity = Number($('goldPurchaseQuantity').value);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    toast('Vui lòng nhập số lượng vàng lớn hơn 0.');
+    return;
+  }
+  goldPurchases.push({
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    date,
+    quantity,
+    note: $('goldPurchaseNote').value.trim()
+  });
+  $('goldPurchaseQuantity').value = '';
+  $('goldPurchaseNote').value = '';
+  void persistGoldPurchases('Đã ghi nhận mua vàng');
+});
 $('exportReportBtn').addEventListener('click', () => {
   try {
     exportMonthlyReport(getFilteredTransactions(transactions), $('reportMonth').value);
@@ -412,7 +671,15 @@ observeAuth(user => {
   if (!user) {
     stopTransactionListener?.();
     stopTransactionListener = undefined;
+    stopGoldPurchaseListener?.();
+    stopGoldPurchaseListener = undefined;
+    stopGoldContributionListener?.();
+    stopGoldContributionListener = undefined;
     cloudReady = false;
+    goldCloudReady = false;
+    goldContributionsCloudReady = false;
+    $('goldPurchaseSubmit').disabled = true;
+    renderGoldFund(goldPurchases, goldContributions, false);
     $('appShell').hidden = true;
     $('authScreen').hidden = false;
     $('loginPassword').value = '';

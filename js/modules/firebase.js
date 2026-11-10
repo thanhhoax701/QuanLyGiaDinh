@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
-import { getDatabase, onValue, ref, set } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
+import { getDatabase, onValue, ref, set, update } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAI-RIffDR2eBT3ZTV9DLDE38_Oz7_PTTI',
@@ -17,6 +17,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
 const transactionsRef = ref(database, 'households/quanlygiadinh-94ced/transactions');
+const goldPurchasesRef = ref(database, 'households/quanlygiadinh-94ced/goldFund/purchases');
+const goldContributionsRef = ref(database, 'households/quanlygiadinh-94ced/goldFund/contributions');
 
 export function observeAuth(callback, onError) {
   return onAuthStateChanged(auth, callback, onError);
@@ -56,4 +58,32 @@ export function observeTransactions(callback, onError) {
 export function writeTransactions(transactions) {
   const data = Object.fromEntries(transactions.map(transaction => [transaction.id, transaction]));
   return set(transactionsRef, data);
+}
+
+export function observeGoldPurchases(callback, onError) {
+  return onValue(goldPurchasesRef, snapshot => {
+    const data = snapshot.val();
+    callback(data && typeof data === 'object' ? Object.values(data) : null);
+  }, onError);
+}
+
+export function writeGoldPurchases(purchases) {
+  const data = Object.fromEntries(purchases.map(purchase => [purchase.id, purchase]));
+  return set(goldPurchasesRef, data);
+}
+
+export function observeGoldContributions(callback, onError) {
+  return onValue(goldContributionsRef, snapshot => {
+    const data = snapshot.val();
+    callback(data && typeof data === 'object' ? Object.values(data) : null);
+  }, onError);
+}
+
+export function writeGoldContributions(contributions) {
+  const data = Object.fromEntries(contributions.map(contribution => [contribution.id, contribution]));
+  return set(goldContributionsRef, data);
+}
+
+export function writeGoldContribution(contribution) {
+  return update(goldContributionsRef, { [contribution.id]: contribution });
 }

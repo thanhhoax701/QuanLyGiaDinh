@@ -16,4 +16,8 @@ export const incomes = list => list.filter(t=>t.type==='income');
 export const monthTransactions = (list,m) => list.filter(t=>monthKey(txDate(t))===m);
 export function loadTransactions(){try{return JSON.parse(localStorage.getItem('giadinh_transactions')||'[]')}catch{return []}}
 export function saveTransactions(list){localStorage.setItem('giadinh_transactions',JSON.stringify(list))}
+export function loadGoldPurchases(){try{const purchases=JSON.parse(localStorage.getItem('giadinh_gold_purchases')||'[]');return Array.isArray(purchases)?purchases:[]}catch{return []}}
+export function saveGoldPurchases(list){localStorage.setItem('giadinh_gold_purchases',JSON.stringify(list))}
+export function loadGoldContributions(){try{const contributions=JSON.parse(localStorage.getItem('giadinh_gold_contributions')||'[]');return Array.isArray(contributions)?contributions:[]}catch{return []}}
+export function saveGoldContributions(list){localStorage.setItem('giadinh_gold_contributions',JSON.stringify(list))}
 export function formatDate(s){const d=new Date(s);return isNaN(d)?'—':`${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`}
