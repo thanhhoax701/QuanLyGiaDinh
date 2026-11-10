@@ -1337,43 +1337,51 @@ td {
   font-size: 20px
 }
 
-.report-top-filters.filters {
-  width: 100%;
-  min-width: 0;
+.report-current-balance {
   display: grid;
-  grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, 1fr)) minmax(190px, 1.2fr);
-  gap: 8px;
-  margin: 0;
-  padding: 10px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 12px
-}
-
-.report-top-filters input,
-.report-top-filters select {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 5px 16px;
   width: 100%;
-  min-width: 0;
-  height: 40px;
-  padding: 8px 10px;
-  font-size: 13px;
-  border-radius: 8px
+  padding: 18px 22px;
+  border: 1px solid transparent;
+  border-radius: 14px
 }
 
-.report-top-filters select {
-  overflow: hidden;
-  text-overflow: ellipsis
+.report-current-balance[hidden] {
+  display: none
 }
 
-@media(max-width:1050px) {
-  .report-top-filters.filters {
-    grid-template-columns: repeat(3, minmax(0, 1fr))
-  }
+.report-current-balance-label {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 15px
+}
 
-  .report-top-filters #reportSearchInput,
-  .report-top-filters #reportDateFilter {
-    grid-column: 1/-1
-  }
+.report-current-balance strong {
+  grid-column: 1;
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.15
+}
+
+.report-current-balance-status {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font-size: clamp(19px, 2.5vw, 26px);
+  font-weight: 750;
+  text-transform: uppercase
+}
+
+.report-current-balance.has-debt {
+  color: #dc2626;
+  background: #fff1f2;
+  border-color: #fecdd3
+}
+
+.report-current-balance.has-surplus {
+  color: #059669;
+  background: #ecfdf5;
+  border-color: #a7f3d0
 }
 
 .report-day-total {
@@ -1414,30 +1422,6 @@ td {
     gap: 4px;
     white-space: normal;
     font-size: 12px
-  }
-}
-
-@media(max-width:680px) {
-  .topbar.report-mode {
-    gap: 10px;
-    margin-bottom: 18px
-  }
-
-  .report-top-filters.filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 7px;
-    padding: 8px
-  }
-
-  .report-top-filters #reportSearchInput,
-  .report-top-filters #reportDateFilter {
-    grid-column: 1/-1
-  }
-
-  .report-top-filters input,
-  .report-top-filters select {
-    font-size: 12px;
-    padding: 8px
   }
 }
 
@@ -1846,10 +1830,6 @@ main {
 }
 
 @media(max-width:680px) {
-  #appTopbar.report-mode .report-top-filters #reportDateFilter {
-    grid-column: 2
-  }
-
   #page-reports .file-panel-title {
     gap: 12px;
     margin-bottom: 14px
@@ -2180,9 +2160,6 @@ main {
     margin-bottom: 14px;
   }
 
-  #appTopbar.report-mode .report-top-filters.filters {
-    margin: 0
-  }
 }
 
 @media(max-width:680px) {
@@ -2230,7 +2207,7 @@ main {
   grid-row: 1
 }
 
-.topbar.report-mode>.report-top-filters {
+.topbar.report-mode>.report-current-balance {
   grid-column: 1/span 2;
   grid-row: 2;
   width: auto;

@@ -1,4 +1,4 @@
-import { $, currentMonth, dateKey, loadTransactions, saveTransactions, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from './modules/data.js';
+import { $, currentMonth, dateKey, loadTransactions, saveTransactions } from './modules/data.js';
 import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
 import { getDailyLimitDebtBalance, renderReports } from './modules/reports.js';
 import { getFilteredTransactions, renderDailySummary } from './modules/transactions.js';
@@ -338,8 +338,6 @@ $('transactionForm').addEventListener('submit', event => {
   void persist(index >= 0 ? 'Đã cập nhật giao dịch' : 'Đã thêm giao dịch');
 });
 
-$('reportSearchInput').addEventListener('input', render);
-['reportTypeFilter', 'reportCategoryFilter', 'reportPersonFilter', 'reportDateFilter'].forEach(id => $(id).addEventListener('change', render));
 $('dayPicker').value = dateKey(new Date());
 $('reportMonth').value = currentMonth;
 $('dayPicker').addEventListener('change', () => renderDailySummary(transactions));
@@ -394,9 +392,6 @@ $('excelFileInput').addEventListener('change', async event => {
     event.target.value = '';
   }
 });
-$('reportCategoryFilter').innerHTML = '<option value="all">Tất cả danh mục</option>' +
-  [...EXPENSE_CATEGORIES, ...INCOME_CATEGORIES, 'Xóa nợ'].map(category => `<option>${category}</option>`).join('');
-
 $('saveSettings').onclick = () => {
   const name = $('familyName').value.trim() || 'Gia Đình';
   $('brandName').textContent = name;

@@ -23,9 +23,13 @@ function calculateDailyLimitDebtByDay(transactions, throughDay) {
     return balances;
 }
 
-export function getDailyLimitDebtBalance(transactions, throughDay) {
+export function getDailyLimitNetBalance(transactions, throughDay) {
     const balances = calculateDailyLimitDebtByDay(transactions, throughDay);
-    return Math.max(balances.get(throughDay) || 0, 0);
+    return balances.get(throughDay) || 0;
+}
+
+export function getDailyLimitDebtBalance(transactions, throughDay) {
+    return Math.max(getDailyLimitNetBalance(transactions, throughDay), 0);
 }
 
 function calculateDebtPaymentBalances(transactions) {
@@ -54,6 +58,12 @@ function calculateDebtPaymentBalances(transactions) {
 
 function renderMonthlyReport(transactions) {
     const month = getFilteredTransactions(transactions), now = new Date(), currentMonthKey = monthKey(now), reportMonth = $('reportMonth').value || currentMonthKey, [year, monthNumber] = reportMonth.split('-').map(Number), monthDayCount = new Date(year, monthNumber, 0).getDate(), lastDayToShow = reportMonth === currentMonthKey ? now.getDate() : reportMonth < currentMonthKey ? monthDayCount : 0, days = Array.from({ length: lastDayToShow }, (_, index) => `${reportMonth}-${String(index + 1).padStart(2, '0')}`), asOfDay = lastDayToShow ? days[days.length - 1] : dateKey(now), debtByDay = calculateDailyLimitDebtByDay(transactions, asOfDay);
+    const currentBalance = getDailyLimitNetBalance(transactions, dateKey(now));
+    const balanceCard = $('reportCurrentBalanceCard');
+    balanceCard.classList.toggle('has-debt', currentBalance > 0);
+    balanceCard.classList.toggle('has-surplus', currentBalance <= 0);
+    $('reportCurrentBalance').textContent = money(Math.abs(currentBalance));
+    $('reportCurrentBalanceStatus').textContent = currentBalance > 0 ? 'Đang nợ' : 'Đang dư';
     const dailyLimitSpendingByDay = {}, dailyLimitPaymentsByDay = {};
     transactions.forEach(t => {
         const day = dateKey(txDate(t));
@@ -76,7 +86,7 @@ function renderMonthlyReport(transactions) {
     $('reportRowCount').textContent = `${month.length} giao dịch`;
     const dailyGroups = {};
     month.forEach(t => { const key = dateKey(txDate(t)); (dailyGroups[key] ??= []).push(t) });
-    $('reportRows').innerHTML = days.filter(day => !$('reportDateFilter').value || day === $('reportDateFilter').value).reverse().map(day => {
+    $('reportRows').innerHTML = days.slice().reverse().map(day => {
         const daily = dailyGroups[day] || [], date = day.split('-').reverse().join('/'), dailyLimit = dailyLimitDebtByDay[day];
         const endingBalance = dailyLimit.debtTotal, endingBalanceLabel = endingBalance > 0 ? `Nợ cuối ${money(endingBalance)}` : `Dư cuối ${money(Math.abs(endingBalance))}`;
         const debtPaymentTooltip = dailyLimit.paid > 0 ? ` title="Đã xóa nợ: ${money(dailyLimit.paid)}"` : '';

@@ -100,31 +100,10 @@
             ><span class="page-breadcrumb-separator">/</span
             ><span id="pageTitle">Sổ chi tiêu</span>
           </h1>
-          <div
-            class="top-actions filters report-top-filters"
-            id="reportFilters"
-            hidden
-          >
-            <input
-              id="reportSearchInput"
-              placeholder="⌕ Tìm theo nội dung, ghi chú..."
-            /><select id="reportTypeFilter">
-              <option value="all">Tất cả loại giao dịch</option>
-              <option value="expense">Chi tiêu</option>
-              <option value="income">Thu nhập</option>
-              <option value="debtPayment">Thanh toán nợ</option></select
-            ><select id="reportCategoryFilter">
-              <option value="all">Tất cả danh mục</option></select
-            ><select id="reportPersonFilter">
-              <option value="all">Tất cả người</option>
-              <option value="Vợ">Nọc Ín</option>
-              <option value="Chồng">Tks Hòe</option></select
-            ><input
-              type="date"
-              id="reportDateFilter"
-              aria-label="Lọc giao dịch theo ngày"
-              title="Lọc giao dịch theo ngày"
-            />
+          <div class="report-current-balance" id="reportCurrentBalanceCard" hidden>
+            <span class="report-current-balance-label">Tổng tiền hiện tại</span>
+            <strong id="reportCurrentBalance">0 ₫</strong>
+            <span class="report-current-balance-status" id="reportCurrentBalanceStatus">Đang dư</span>
           </div>
           <div class="top-actions">
             <button class="btn" id="addBtn" type="button">
