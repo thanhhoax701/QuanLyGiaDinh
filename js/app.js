@@ -15,6 +15,12 @@ function render() {
   renderDailySummary(transactions);
 }
 
+function selectLatestTransactionDay() {
+  const latestTransaction = transactions.reduce((latest, transaction) =>
+    !latest || transaction.date.localeCompare(latest.date) > 0 ? transaction : latest, null);
+  if (latestTransaction) $('dayPicker').value = dateKey(new Date(latestTransaction.date));
+}
+
 function toast(message) {
   $('toast').textContent = message;
   $('toast').classList.add('show');
@@ -94,6 +100,7 @@ function startTransactionSync(user) {
         if (localTransactions.length && confirm(`Tìm thấy ${localTransactions.length} giao dịch cũ trên thiết bị này. Tải những giao dịch đó lên Firebase để dùng chung?`)) {
           transactions = localTransactions;
           showApp(user);
+          selectLatestTransactionDay();
           render();
           cloudReady = true;
           await persist('Đã chuyển dữ liệu cũ lên Firebase');
@@ -104,6 +111,7 @@ function startTransactionSync(user) {
         transactions = remoteTransactions;
         saveTransactions(transactions);
       }
+      selectLatestTransactionDay();
       cloudReady = true;
       showApp(user);
       render();
