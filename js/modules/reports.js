@@ -62,6 +62,7 @@ function renderMonthlyReport(transactions) {
     const balanceCard = $('reportCurrentBalanceCard');
     balanceCard.classList.toggle('has-debt', currentBalance > 0);
     balanceCard.classList.toggle('has-surplus', currentBalance <= 0);
+    $('reportCurrentBalanceLabel').textContent = currentBalance > 0 ? 'Tổng nợ hiện tại' : 'Tổng dư hiện tại';
     $('reportCurrentBalance').textContent = money(Math.abs(currentBalance));
     $('reportCurrentBalanceStatus').textContent = currentBalance > 0 ? 'Đang nợ' : 'Đang dư';
     const dailyLimitSpendingByDay = {}, dailyLimitPaymentsByDay = {};
