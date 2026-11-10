@@ -489,31 +489,6 @@ td {
   display: block
 }
 
-.report-cards {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-bottom: 18px
-}
-
-.report-card {
-  background: #f7faff;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px
-}
-
-.report-card span {
-  font-size: 12px;
-  color: var(--muted)
-}
-
-.report-card strong {
-  display: block;
-  font-size: 21px;
-  margin-top: 7px
-}
-
 .settings-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -756,10 +731,6 @@ td {
 
   .panel {
     padding: 14px
-  }
-
-  .report-cards {
-    grid-template-columns: 1fr
   }
 
   .form-grid,
@@ -1166,15 +1137,6 @@ td {
   display: none
 }
 
-.report-section-title {
-  font-size: 15px;
-  margin: 20px 0 10px
-}
-
-.allowance-month-summary {
-  margin-bottom: 22px
-}
-
 [hidden] {
   display: none !important
 }
@@ -1310,28 +1272,6 @@ td {
 
 #page-reports>.panel>.table-wrap>table:not(.debt-payment-history)>thead {
   display: none
-}
-
-.report-summary {
-  margin: 0 0 18px
-}
-
-.report-summary>summary {
-  cursor: pointer;
-  color: var(--navy);
-  font-weight: 650;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: #f7faff
-}
-
-.report-summary>summary:hover {
-  background: #eef4ff
-}
-
-.report-summary-content {
-  padding-top: 16px
 }
 
 .file-panel-title {
@@ -1752,28 +1692,6 @@ main {
 }
 
 @media(max-width:900px) {
-  #page-reports .report-summary-content {
-    padding-top: 12px
-  }
-
-  #page-reports .report-cards {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
-    margin-bottom: 12px
-  }
-
-  #page-reports .report-card {
-    padding: 12px
-  }
-
-  #page-reports .report-card strong {
-    font-size: 18px
-  }
-
-  #page-reports .report-section-title {
-    margin: 12px 0
-  }
-
   #page-reports .report-day>summary {
     display: grid;
     grid-template-columns: minmax(115px, auto) minmax(0, 1fr);
@@ -1953,14 +1871,6 @@ main {
     width: 100%;
     padding: 9px 8px;
     font-size: 13px
-  }
-
-  #page-reports .report-summary {
-    margin-bottom: 12px
-  }
-
-  #page-reports .report-summary>summary {
-    padding: 9px 11px
   }
 
   #page-reports .panel-title {
@@ -2413,12 +2323,6 @@ main {
   .account-menu>.logout {
     top: calc(100% + 7px);
     bottom: auto
-  }
-}
-
-@media(min-width:1051px) {
-  .allowance-month-summary {
-    grid-template-columns: repeat(4, minmax(0, 1fr))
   }
 }
 

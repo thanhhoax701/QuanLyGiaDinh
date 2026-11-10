@@ -1,4 +1,4 @@
-import { $, COLORS, DAILY_HUSBAND_ALLOWANCE, dateKey, monthKey, money, sum, expenses, incomes, txDate, escapeHTML } from './data.js';
+import { $, COLORS, DAILY_HUSBAND_ALLOWANCE, dateKey, monthKey, money, sum, txDate, escapeHTML } from './data.js';
 import { getFilteredTransactions, renderRows } from './transactions.js';
 
 function calculateDailyLimitDebtByDay(transactions, throughDay) {
@@ -53,8 +53,7 @@ function calculateDebtPaymentBalances(transactions) {
 }
 
 function renderMonthlyReport(transactions) {
-    const month = getFilteredTransactions(transactions), ex = expenses(month), inc = incomes(month), now = new Date(), currentMonthKey = monthKey(now), reportMonth = $('reportMonth').value || currentMonthKey, [year, monthNumber] = reportMonth.split('-').map(Number), monthDayCount = new Date(year, monthNumber, 0).getDate(), lastDayToShow = reportMonth === currentMonthKey ? now.getDate() : reportMonth < currentMonthKey ? monthDayCount : 0, days = Array.from({ length: lastDayToShow }, (_, index) => `${reportMonth}-${String(index + 1).padStart(2, '0')}`), asOfDay = lastDayToShow ? days[days.length - 1] : dateKey(now), debtByDay = calculateDailyLimitDebtByDay(transactions, asOfDay);
-    let dailyLimitRemainingTotal = 0, dailyLimitDebtTotal = 0, dailyLimitSpentTotal = 0;
+    const month = getFilteredTransactions(transactions), now = new Date(), currentMonthKey = monthKey(now), reportMonth = $('reportMonth').value || currentMonthKey, [year, monthNumber] = reportMonth.split('-').map(Number), monthDayCount = new Date(year, monthNumber, 0).getDate(), lastDayToShow = reportMonth === currentMonthKey ? now.getDate() : reportMonth < currentMonthKey ? monthDayCount : 0, days = Array.from({ length: lastDayToShow }, (_, index) => `${reportMonth}-${String(index + 1).padStart(2, '0')}`), asOfDay = lastDayToShow ? days[days.length - 1] : dateKey(now), debtByDay = calculateDailyLimitDebtByDay(transactions, asOfDay);
     const dailyLimitSpendingByDay = {}, dailyLimitPaymentsByDay = {};
     transactions.forEach(t => {
         const day = dateKey(txDate(t));
@@ -68,16 +67,13 @@ function renderMonthlyReport(transactions) {
         while (date <= lastDate) {
             const day = dateKey(date), spent = dailyLimitSpendingByDay[day] || 0, dailyDebt = Math.max(spent - DAILY_HUSBAND_ALLOWANCE, 0), remaining = Math.max(DAILY_HUSBAND_ALLOWANCE - spent, 0);
             if (monthKey(date) === reportMonth) {
-                dailyLimitSpentTotal += spent;
-                dailyLimitRemainingTotal += remaining;
-                dailyLimitDebtTotal += dailyDebt;
                 dailyLimitDebtByDay[day] = { spent, remaining, dailyDebt, debtTotal: debtByDay.get(day) || 0, paid: dailyLimitPaymentsByDay[day] || 0 };
             }
             date.setDate(date.getDate() + 1);
         }
     }
     days.forEach(day => { dailyLimitDebtByDay[day] ||= { spent: 0, remaining: DAILY_HUSBAND_ALLOWANCE, dailyDebt: 0, debtTotal: debtByDay.get(day) || 0, paid: dailyLimitPaymentsByDay[day] || 0 } });
-    $('reportIncome').textContent = money(sum(inc)); $('reportExpense').textContent = money(sum(ex)); $('reportBalance').textContent = money(sum(inc) - sum(ex)); $('reportDailyLimitSpent').textContent = money(dailyLimitSpentTotal); $('reportDailyLimitRemaining').textContent = money(dailyLimitRemainingTotal); $('reportDailyLimitDebt').textContent = money(dailyLimitDebtTotal); $('reportDailyLimitDebtBalance').textContent = money(getDailyLimitDebtBalance(transactions, asOfDay)); $('reportDebtAsOfDate').textContent = asOfDay.split('-').reverse().join('/'); $('reportRowCount').textContent = `${month.length} giao dịch`;
+    $('reportRowCount').textContent = `${month.length} giao dịch`;
     const dailyGroups = {};
     month.forEach(t => { const key = dateKey(txDate(t)); (dailyGroups[key] ??= []).push(t) });
     $('reportRows').innerHTML = days.filter(day => !$('reportDateFilter').value || day === $('reportDateFilter').value).reverse().map(day => {
