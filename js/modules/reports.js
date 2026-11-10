@@ -11,13 +11,13 @@ function calculateDailyLimitDebtByDay(transactions, throughDay) {
     const expenseDays = Object.keys(spendingByDay).sort();
     if (!expenseDays.length || throughDay < expenseDays[0]) return new Map();
     const balances = new Map();
-    let debtBalance = 0;
+    let balance = 0;
     const date = new Date(`${expenseDays[0]}T12:00:00`), lastDate = new Date(`${throughDay}T12:00:00`);
     while (date <= lastDate) {
         const day = dateKey(date), spent = spendingByDay[day] || 0;
-        if (spent) debtBalance = Math.max(debtBalance + spent - DAILY_HUSBAND_ALLOWANCE, 0);
-        debtBalance = Math.max(debtBalance - (paymentsByDay[day] || 0), 0);
-        balances.set(day, debtBalance);
+        balance += spent - DAILY_HUSBAND_ALLOWANCE;
+        if (balance > 0) balance = Math.max(balance - (paymentsByDay[day] || 0), 0);
+        balances.set(day, balance);
         date.setDate(date.getDate() + 1);
     }
     return balances;
@@ -25,7 +25,7 @@ function calculateDailyLimitDebtByDay(transactions, throughDay) {
 
 export function getDailyLimitDebtBalance(transactions, throughDay) {
     const balances = calculateDailyLimitDebtByDay(transactions, throughDay);
-    return balances.get(throughDay) || 0;
+    return Math.max(balances.get(throughDay) || 0, 0);
 }
 
 function calculateDebtPaymentBalances(transactions) {
@@ -37,15 +37,15 @@ function calculateDebtPaymentBalances(transactions) {
     });
     const days = [...new Set([...Object.keys(spendingByDay), ...Object.keys(paymentsByDay)])].sort();
     const balances = new Map();
-    let debtBalance = 0;
+    let balance = 0;
     if (!days.length) return balances;
     const date = new Date(`${days[0]}T12:00:00`), lastDate = new Date(`${days[days.length - 1]}T12:00:00`);
     while (date <= lastDate) {
         const day = dateKey(date), spent = spendingByDay[day] || 0;
-        if (spent) debtBalance = Math.max(debtBalance + spent - DAILY_HUSBAND_ALLOWANCE, 0);
+        balance += spent - DAILY_HUSBAND_ALLOWANCE;
         (paymentsByDay[day] || []).slice().sort((a, b) => a.date.localeCompare(b.date)).forEach(payment => {
-            debtBalance = Math.max(debtBalance - Number(payment.amount), 0);
-            balances.set(payment, debtBalance);
+            if (balance > 0) balance = Math.max(balance - Number(payment.amount), 0);
+            balances.set(payment, Math.max(balance, 0));
         });
         date.setDate(date.getDate() + 1);
     }
@@ -82,8 +82,9 @@ function renderMonthlyReport(transactions) {
     month.forEach(t => { const key = dateKey(txDate(t)); (dailyGroups[key] ??= []).push(t) });
     $('reportRows').innerHTML = days.filter(day => !$('reportDateFilter').value || day === $('reportDateFilter').value).reverse().map(day => {
         const daily = dailyGroups[day] || [], date = day.split('-').reverse().join('/'), dailyLimit = dailyLimitDebtByDay[day];
+        const endingBalance = dailyLimit.debtTotal, endingBalanceLabel = endingBalance > 0 ? `Nợ cuối ${money(endingBalance)}` : `Dư cuối ${money(Math.abs(endingBalance))}`;
         const debtPaymentTooltip = dailyLimit.paid > 0 ? ` title="Đã xóa nợ: ${money(dailyLimit.paid)}" class="report-day-debt-total has-debt-payment"` : ' class="report-day-debt-total"';
-        return `<tr class="report-day-row"><td colspan="7"><details class="report-day"><summary><span class="report-day-date">${date}</span><span class="report-day-count">${daily.length} giao dịch</span><span class="report-day-total"><span class="report-day-spent">Chi ngày ${money(dailyLimit.spent)}</span><span class="report-day-daily-debt">Nợ ngày ${money(dailyLimit.dailyDebt)}</span><span class="report-day-remaining">Dư của ngày ${money(dailyLimit.remaining)}</span><span${debtPaymentTooltip}>Nợ cuối ${money(dailyLimit.debtTotal)}</span></span></summary><div class="table-wrap"><table><thead><tr><th>Ngày giờ</th><th>Nội dung</th><th>Danh mục</th><th>Số tiền</th><th>Người thực hiện</th><th>Nguồn tiền</th><th>Thao tác</th></tr></thead><tbody>${daily.length ? renderRows(daily, { mobileDetails: true }) : '<tr><td colspan="7" class="empty">Không có giao dịch trong ngày này.</td></tr>'}</tbody></table></div></details></td></tr>`;
+        return `<tr class="report-day-row"><td colspan="7"><details class="report-day"><summary><span class="report-day-date">${date}</span><span class="report-day-count">${daily.length} giao dịch</span><span class="report-day-total"><span class="report-day-spent">Chi ngày ${money(dailyLimit.spent)}</span><span class="report-day-daily-debt">Nợ ngày ${money(dailyLimit.dailyDebt)}</span><span class="report-day-remaining">Dư của ngày ${money(dailyLimit.remaining)}</span><span${debtPaymentTooltip}>${endingBalanceLabel}</span></span></summary><div class="table-wrap"><table><thead><tr><th>Ngày giờ</th><th>Nội dung</th><th>Danh mục</th><th>Số tiền</th><th>Người thực hiện</th><th>Nguồn tiền</th><th>Thao tác</th></tr></thead><tbody>${daily.length ? renderRows(daily, { mobileDetails: true }) : '<tr><td colspan="7" class="empty">Không có giao dịch trong ngày này.</td></tr>'}</tbody></table></div></details></td></tr>`;
     }).join('') || '<tr><td colspan="7" class="empty">Không có ngày phù hợp bộ lọc.</td></tr>';
     renderDebtPaymentHistory(transactions, reportMonth);
 }
