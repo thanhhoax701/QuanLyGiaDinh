@@ -27,13 +27,6 @@ function addTransactionSheet(workbook, transactions) {
   XLSX.utils.book_append_sheet(workbook, sheet, 'Giao dịch');
 }
 
-export function exportLedger(transactions) {
-  const XLSX = getXLSX();
-  const workbook = XLSX.utils.book_new();
-  addTransactionSheet(workbook, transactions);
-  XLSX.writeFile(workbook, 'so-thu-chi.xlsx');
-}
-
 export function exportMonthlyReport(transactions, reportMonth) {
   const XLSX = getXLSX();
   const workbook = XLSX.utils.book_new();

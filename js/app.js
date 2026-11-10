@@ -1,10 +1,10 @@
-import { $, currentMonth, dateKey, loadTransactions, saveTransactions } from './modules/data.js';
+import { $, currentMonth, loadTransactions, saveTransactions } from './modules/data.js';
 import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions } from './modules/firebase.js';
 import { getDailyLimitDebtBalance, renderReports } from './modules/reports.js';
-import { getFilteredTransactions, renderDailySummary } from './modules/transactions.js';
+import { getFilteredTransactions } from './modules/transactions.js';
 import { openModal, closeModal, fillCategories } from './modules/modal.js';
 import { initNavigation } from './modules/navigation.js';
-import { exportLedger, exportMonthlyReport, readTransactionsFile } from './modules/excel.js';
+import { exportMonthlyReport, readTransactionsFile } from './modules/excel.js';
 
 let transactions = loadTransactions();
 let cloudReady = false;
@@ -12,13 +12,6 @@ let stopTransactionListener;
 
 function render() {
   renderReports(transactions);
-  renderDailySummary(transactions);
-}
-
-function selectLatestTransactionDay() {
-  const latestTransaction = transactions.reduce((latest, transaction) =>
-    !latest || transaction.date.localeCompare(latest.date) > 0 ? transaction : latest, null);
-  if (latestTransaction) $('dayPicker').value = dateKey(new Date(latestTransaction.date));
 }
 
 function toast(message) {
@@ -100,7 +93,6 @@ function startTransactionSync(user) {
         if (localTransactions.length && confirm(`Tìm thấy ${localTransactions.length} giao dịch cũ trên thiết bị này. Tải những giao dịch đó lên Firebase để dùng chung?`)) {
           transactions = localTransactions;
           showApp(user);
-          selectLatestTransactionDay();
           render();
           cloudReady = true;
           await persist('Đã chuyển dữ liệu cũ lên Firebase');
@@ -111,7 +103,6 @@ function startTransactionSync(user) {
         transactions = remoteTransactions;
         saveTransactions(transactions);
       }
-      selectLatestTransactionDay();
       cloudReady = true;
       showApp(user);
       render();
@@ -346,19 +337,8 @@ $('transactionForm').addEventListener('submit', event => {
   void persist(index >= 0 ? 'Đã cập nhật giao dịch' : 'Đã thêm giao dịch');
 });
 
-$('dayPicker').value = dateKey(new Date());
 $('reportMonth').value = currentMonth;
-$('dayPicker').addEventListener('change', () => renderDailySummary(transactions));
 $('reportMonth').addEventListener('change', render);
-$('exportLedgerBtn').addEventListener('click', () => {
-  try {
-    exportLedger(transactions);
-    toast('Đã xuất toàn bộ giao dịch ra Excel.');
-  } catch (error) {
-    console.error('Không thể xuất sổ thu chi ra Excel:', error);
-    toast(error.message || 'Xuất Excel thất bại.');
-  }
-});
 $('exportReportBtn').addEventListener('click', () => {
   try {
     exportMonthlyReport(getFilteredTransactions(transactions), $('reportMonth').value);
@@ -368,13 +348,10 @@ $('exportReportBtn').addEventListener('click', () => {
     toast(error.message || 'Xuất Excel thất bại.');
   }
 });
-let importTarget = 'ledger';
-function chooseExcelFile(target) {
-  importTarget = target;
+function chooseExcelFile() {
   $('excelFileInput').click();
 }
-$('importLedgerBtn').addEventListener('click', () => chooseExcelFile('ledger'));
-$('importReportBtn').addEventListener('click', () => chooseExcelFile('report'));
+$('importReportBtn').addEventListener('click', chooseExcelFile);
 $('excelFileInput').addEventListener('change', async event => {
   const file = event.target.files[0];
   if (!file) return;
@@ -394,7 +371,7 @@ $('excelFileInput').addEventListener('change', async event => {
     transactions = [...transactions, ...additions];
     void persist(`Đã nhập ${additions.length} giao dịch; bỏ qua ${importedTransactions.length - additions.length} giao dịch trùng ID.`);
   } catch (error) {
-    console.error(`Không thể nhập file Excel (${importTarget}):`, error);
+    console.error('Không thể nhập giao dịch từ file Excel:', error);
     toast(error.message || 'Nhập Excel thất bại.');
   } finally {
     event.target.value = '';

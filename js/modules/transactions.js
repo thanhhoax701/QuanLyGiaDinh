@@ -1,4 +1,4 @@
-import { $, DAILY_HUSBAND_ALLOWANCE, money, escapeHTML, formatDate, dateKey, expenses, sum, txDate } from './data.js';
+import { $, money, escapeHTML, formatDate } from './data.js';
 export function renderRows(list, { mobileDetails = false } = {}) {
     if (!list.length) return '<tr><td colspan="7" class="empty">Chưa có giao dịch. Nhấn “Thêm khoản chi” để bắt đầu.</td></tr>';
     return list.slice().sort((a, b) => b.date.localeCompare(a.date)).map(t => {
@@ -13,4 +13,3 @@ export function getFilteredTransactions(transactions) {
     const month = $('reportMonth').value;
     return transactions.filter(transaction => !month || transaction.date.slice(0, 7) === month);
 }
-export function renderDailySummary(transactions) { const selected = $('dayPicker').value, dayTransactions = transactions.filter(t => dateKey(txDate(t)) === selected), dayExpenses = expenses(dayTransactions), husbandSpent = sum(expenses(dayTransactions.filter(t => t.person === 'Chồng'))), remaining = DAILY_HUSBAND_ALLOWANCE - husbandSpent, bar = $('husbandAllowanceProgress'); $('dayTotal').textContent = money(sum(dayExpenses)); $('dayCount').textContent = dayExpenses.length; $('husbandAllowanceBudget').textContent = money(DAILY_HUSBAND_ALLOWANCE); $('husbandAllowanceSpent').textContent = money(husbandSpent); $('husbandAllowanceRemaining').textContent = `${remaining >= 0 ? 'Còn lại' : 'Vượt'} ${money(Math.abs(remaining))}`; $('husbandAllowanceCard').classList.toggle('over-budget', remaining < 0); bar.style.width = `${Math.min(husbandSpent / DAILY_HUSBAND_ALLOWANCE * 100, 100)}%`; bar.parentElement.setAttribute('aria-valuenow', String(Math.min(husbandSpent, DAILY_HUSBAND_ALLOWANCE))); $('dailyRows').innerHTML = renderRows(dayTransactions, { mobileDetails: true }); }

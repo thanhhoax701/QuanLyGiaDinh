@@ -1,4 +1,4 @@
-import { $, COLORS, DAILY_HUSBAND_ALLOWANCE, dateKey, monthKey, money, sum, txDate, escapeHTML } from './data.js';
+import { $, COLORS, DAILY_HUSBAND_ALLOWANCE, dateKey, monthKey, money, sum, expenses, incomes, txDate, escapeHTML } from './data.js';
 import { getFilteredTransactions, renderRows } from './transactions.js';
 
 function calculateDailyLimitDebtByDay(transactions, throughDay) {
