@@ -26,6 +26,11 @@ function formatAmountInput(value, month, field, disabled) {
     return `<input class="gold-contribution-input" type="text" inputmode="numeric" autocomplete="off" aria-label="${monthLabel(month)}, ${field}" data-month="${month}" data-contribution="${field}" value="${amount ? amount.toLocaleString('vi-VN') : ''}"${disabled ? ' disabled' : ''}>`;
 }
 
+function formatCalculatedCash(value, month) {
+    const amount = Math.max(0, Math.trunc(Number(value) || 0));
+    return `<input class="gold-contribution-input" type="text" aria-label="${monthLabel(month)}, tiền tự tính từ KPI và lương" value="${amount ? amount.toLocaleString('vi-VN') : ''}" readonly>`;
+}
+
 function formatDateInput(value, month, disabled) {
     const date = typeof value === 'string' && dateKey(new Date(`${value}T12:00:00`)) === value ? value : '';
     return `<input class="gold-contribution-date" type="date" aria-label="${monthLabel(month)}, ngày mua" data-month="${month}" data-contribution="purchaseDate" value="${date}"${disabled ? ' disabled' : ''}>`;
@@ -38,11 +43,19 @@ function formatStatusSelect(value, month, disabled) {
 }
 
 function getContributionTotal(contribution) {
-    return Number(contribution.cash || 0) +
+    return getContributionCash(contribution) +
         Number(contribution.fund || 0) +
         Number(contribution.pig || 0) +
         Number(contribution.extra || 0) -
         Number(contribution.debt || 0);
+}
+
+function getContributionCash(contribution) {
+    const kpiAndSalary = Number(contribution.thanhHoaKpi || 0) +
+        Number(contribution.thanhHoaSalary || 0) +
+        Number(contribution.ngocYenKpi || 0) +
+        Number(contribution.ngocYenSalary || 0);
+    return kpiAndSalary || Number(contribution.cash || 0);
 }
 
 export function renderGoldFund(purchases, contributions = [], contributionsReady = true) {
@@ -108,9 +121,12 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
         cumulativeTotal += totalForMonth;
         const contributedByThanhHoa = Number(contribution.thanhHoaKpi || 0) + Number(contribution.thanhHoaSalary || 0);
         const contributedByNgocYen = Number(contribution.ngocYenKpi || 0) + Number(contribution.ngocYenSalary || 0);
-        const amountCells = CONTRIBUTION_FIELDS.map(field =>
-            `<td>${formatAmountInput(contribution[field], month, field, !contributionsReady)}${field === 'thanhHoaTarget' ? `<small>Đã góp ${money(contributedByThanhHoa)} / ${money(contribution.thanhHoaTarget || 0)}</small>` : field === 'ngocYenTarget' ? `<small>Đã góp ${money(contributedByNgocYen)} / ${money(contribution.ngocYenTarget || 0)}</small>` : ''}</td>`
-        ).join('');
+        const amountCells = CONTRIBUTION_FIELDS.map(field => {
+            const input = field === 'cash'
+                ? formatCalculatedCash(getContributionCash(contribution), month)
+                : formatAmountInput(contribution[field], month, field, !contributionsReady);
+            return `<td>${input}${field === 'thanhHoaTarget' ? `<small>Đã góp ${money(contributedByThanhHoa)} / ${money(contribution.thanhHoaTarget || 0)}</small>` : field === 'ngocYenTarget' ? `<small>Đã góp ${money(contributedByNgocYen)} / ${money(contribution.ngocYenTarget || 0)}</small>` : ''}</td>`;
+        }).join('');
         const dateCell = formatDateInput(contribution.purchaseDate, month, !contributionsReady);
         const statusCell = formatStatusSelect(contribution.status, month, !contributionsReady);
         contributionRows.push(`<tr><td>${++period}</td><td>${monthLabel(month)}</td>${amountCells}<td class="gold-contribution-total">${money(totalForMonth)}<small>Dư: ${money(cumulativeTotal)}</small></td><td>${dateCell}<small>${bought ? `Đã mua ${formatQuantity(bought)}` : ''}</small></td><td>${statusCell}</td></tr>`);

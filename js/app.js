@@ -306,7 +306,7 @@ $('goldContributionRows').addEventListener('change', event => {
   const amountFields = [
     'thanhHoaKpi', 'thanhHoaSalary', 'thanhHoaTarget',
     'ngocYenKpi', 'ngocYenSalary', 'ngocYenTarget',
-    'cash', 'fund', 'pig', 'extra', 'debt'
+    'fund', 'pig', 'extra', 'debt'
   ];
   if (!amountFields.includes(field) && field !== 'purchaseDate' && field !== 'status') return;
   const current = goldContributions.find(item => item.id === month);
@@ -358,6 +358,9 @@ $('goldContributionRows').addEventListener('change', event => {
       return;
     }
     contribution[field] = amount;
+    if (['thanhHoaKpi', 'thanhHoaSalary', 'ngocYenKpi', 'ngocYenSalary'].includes(field)) {
+      contribution.cash = 0;
+    }
   }
 
   if (current) {
