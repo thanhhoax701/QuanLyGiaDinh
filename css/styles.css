@@ -1341,12 +1341,17 @@ td {
   border-color: #a7f3d0
 }
 
+.gold-summary-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px
+}
+
 .gold-summary {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 16px;
-  margin-bottom: 20px;
   padding: 18px 20px;
   border: 1px solid #f3d38a;
   border-radius: 12px;
@@ -1354,6 +1359,7 @@ td {
 }
 
 .gold-summary>div {
+  position: relative;
   display: grid;
   gap: 4px
 }
@@ -1364,9 +1370,30 @@ td {
   line-height: 1.2
 }
 
-.gold-summary>span {
+.gold-summary #goldTotalPurchased {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 3;
+  width: max-content;
+  max-width: min(320px, calc(100vw - 64px));
+  padding: 8px 12px;
+  border: 1px solid #f3d38a;
+  border-radius: 8px;
+  background: #fff;
   color: #9a6700;
-  font-weight: 650
+  font-weight: 650;
+  box-shadow: 0 6px 18px #18263b1f;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity .15s, visibility .15s
+}
+
+.gold-summary>div:hover #goldTotalPurchased,
+.gold-summary>div:focus-within #goldTotalPurchased {
+  opacity: 1;
+  visibility: visible
 }
 
 .gold-purchase-form {
@@ -1389,8 +1416,8 @@ td {
 
 .gold-contribution-summary {
   display: grid;
+  align-content: center;
   gap: 4px;
-  margin-bottom: 20px;
   padding: 14px 18px;
   border: 1px solid #c7d2fe;
   border-radius: 12px;
@@ -2319,15 +2346,29 @@ main {
     padding: 5px 6px
   }
 
-  .gold-summary {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 8px;
-    padding: 15px
+  .gold-summary-row {
+    gap: 8px
   }
 
+  .gold-summary,
   .gold-contribution-summary {
-    padding: 13px 15px
+    min-width: 0;
+    padding: 12px
+  }
+
+  .gold-summary strong {
+    font-size: clamp(20px, 6vw, 30px)
+  }
+
+  .gold-summary .eyebrow,
+  .gold-contribution-summary .eyebrow {
+    font-size: 9px;
+    letter-spacing: 0
+  }
+
+  .gold-contribution-summary strong {
+    font-size: clamp(14px, 4.5vw, 20px);
+    overflow-wrap: anywhere
   }
 
   .gold-month-table th.gold-month-movement,
