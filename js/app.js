@@ -16,6 +16,7 @@ let goldContributionsCloudReady = false;
 let stopTransactionListener;
 let stopGoldPurchaseListener;
 let stopGoldContributionListener;
+let editingGoldPurchaseId = null;
 
 function render() {
   renderReports(transactions);
@@ -269,6 +270,8 @@ function startTransactionSync(user) {
 document.addEventListener('click', event => {
   const duplicate = event.target.closest('[data-duplicate]');
   const edit = event.target.closest('[data-edit]');
+  const editGold = event.target.closest('[data-edit-gold]');
+  const editGoldMonth = event.target.closest('[data-edit-gold-month]');
   const del = event.target.closest('[data-delete]');
   const deleteGold = event.target.closest('[data-delete-gold]');
   if (duplicate) {
@@ -280,6 +283,43 @@ document.addEventListener('click', event => {
     if (transaction) openModal(transaction);
   }
   if (del) deleteTransaction(del.dataset.delete);
+  if (editGoldMonth) {
+    if (!goldCloudReady) {
+      toast('Đang tải dữ liệu quỹ vàng. Vui lòng thử lại sau.');
+      return;
+    }
+    const month = editGoldMonth.dataset.editGoldMonth;
+    const monthTransactions = goldPurchases.filter(purchase => purchase.date.slice(0, 7) === month);
+    if (!monthTransactions.length) return;
+    let purchase = monthTransactions[0];
+    if (monthTransactions.length > 1) {
+      const options = monthTransactions.map((item, index) => {
+        const type = item.type === 'withdrawal' ? 'Lấy ra' : 'Mua';
+        const note = item.note ? ` — ${item.note}` : '';
+        return `${index + 1}. ${type} ${Number(item.quantity).toLocaleString('vi-VN')} chỉ (${item.date.split('-').reverse().join('/')})${note}`;
+      }).join('\n');
+      const choice = prompt(`Chọn giao dịch cần sửa trong tháng ${Number(month.slice(5))}/${month.slice(0, 4)}:\n${options}`);
+      if (choice === null) return;
+      const index = Number(choice) - 1;
+      if (!Number.isInteger(index) || index < 0 || index >= monthTransactions.length) {
+        toast('Lựa chọn giao dịch không hợp lệ.');
+        return;
+      }
+      purchase = monthTransactions[index];
+    }
+    startEditingGoldPurchase(purchase);
+    return;
+  }
+  if (editGold) {
+    if (!goldCloudReady) {
+      toast('Đang tải dữ liệu quỹ vàng. Vui lòng thử lại sau.');
+      return;
+    }
+    const purchase = goldPurchases.find(item => item.id === editGold.dataset.editGold);
+    if (!purchase) return;
+    startEditingGoldPurchase(purchase);
+    return;
+  }
   if (deleteGold) {
     if (!goldCloudReady) {
       toast('Đang tải dữ liệu quỹ vàng. Vui lòng thử lại sau.');
@@ -289,6 +329,7 @@ document.addEventListener('click', event => {
     const typeLabel = purchase?.type === 'withdrawal' ? 'lấy ra' : 'mua';
     if (purchase && confirm(`Xóa giao dịch ${typeLabel} ${Number(purchase.quantity).toLocaleString('vi-VN')} chỉ vàng?`)) {
       goldPurchases = goldPurchases.filter(item => item.id !== purchase.id);
+      if (editingGoldPurchaseId === purchase.id) resetGoldPurchaseForm();
       void persistGoldPurchases('Đã xóa giao dịch vàng');
     }
   }
@@ -643,17 +684,48 @@ $('goldPurchaseForm').addEventListener('submit', event => {
     return;
   }
   const type = $('goldTransactionType').value;
-  goldPurchases.push({
-    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+  const purchase = {
+    id: editingGoldPurchaseId || (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
     date,
     quantity,
     type,
     note: $('goldPurchaseNote').value.trim()
-  });
+  };
+  if (editingGoldPurchaseId) {
+    goldPurchases = goldPurchases.map(item => item.id === editingGoldPurchaseId ? purchase : item);
+    editingGoldPurchaseId = null;
+    resetGoldPurchaseForm();
+    void persistGoldPurchases('Đã cập nhật giao dịch vàng');
+    return;
+  }
+  goldPurchases.push(purchase);
   $('goldPurchaseQuantity').value = '';
   $('goldPurchaseNote').value = '';
   void persistGoldPurchases(type === 'withdrawal' ? 'Đã ghi nhận lấy vàng ra' : 'Đã ghi nhận mua vàng');
 });
+$('goldPurchaseCancelEdit').addEventListener('click', resetGoldPurchaseForm);
+
+function resetGoldPurchaseForm() {
+  editingGoldPurchaseId = null;
+  $('goldPurchaseForm').reset();
+  $('goldPurchaseDate').value = dateKey(new Date());
+  $('goldTransactionType').value = 'purchase';
+  $('goldPurchaseSubmit').textContent = '＋ Ghi nhận giao dịch vàng';
+  $('goldPurchaseCancelEdit').hidden = true;
+}
+
+function startEditingGoldPurchase(purchase) {
+  editingGoldPurchaseId = purchase.id;
+  $('goldPurchaseDate').value = purchase.date;
+  $('goldTransactionType').value = purchase.type === 'withdrawal' ? 'withdrawal' : 'purchase';
+  $('goldPurchaseQuantity').value = purchase.quantity;
+  $('goldPurchaseNote').value = purchase.note || '';
+  $('goldPurchaseSubmit').textContent = 'Lưu thay đổi';
+  $('goldPurchaseCancelEdit').hidden = false;
+  $('goldPurchaseForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('goldPurchaseQuantity').focus();
+}
+
 $('exportReportBtn').addEventListener('click', () => {
   try {
     exportMonthlyReport(getFilteredTransactions(transactions), $('reportMonth').value);

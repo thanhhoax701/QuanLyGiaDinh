@@ -128,10 +128,14 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
         const month = `${goldCursor.getFullYear()}-${String(goldCursor.getMonth() + 1).padStart(2, '0')}`;
         const movement = monthPurchases.get(month) || { purchased: 0, withdrawn: 0 };
         monthlyGoldTotal += movement.purchased - movement.withdrawn;
-        goldMonthlyRows.push(`<tr><td>${monthLabel(month)}</td><td>${formatQuantity(movement.purchased)}</td><td>${formatQuantity(movement.withdrawn)}</td><td><strong>${formatQuantity(monthlyGoldTotal)}</strong></td></tr>`);
+        const monthTransactions = validPurchases.filter(purchase => purchase.date.slice(0, 7) === month);
+        const editButton = monthTransactions.length
+            ? `<button class="icon-btn" type="button" title="Sửa giao dịch vàng ${monthLabel(month)}" aria-label="Sửa giao dịch vàng trong ${monthLabel(month)}" data-edit-gold-month="${month}">✎</button>`
+            : '—';
+        goldMonthlyRows.push(`<tr><td>${monthLabel(month)}</td><td>${formatQuantity(movement.purchased)}</td><td>${formatQuantity(movement.withdrawn)}</td><td><strong>${formatQuantity(monthlyGoldTotal)}</strong></td><td><div class="actions">${editButton}</div></td></tr>`);
         goldCursor.setMonth(goldCursor.getMonth() + 1);
     }
-    $('goldMonthlyRows').innerHTML = goldMonthlyRows.join('') || '<tr><td colspan="4" class="empty">Chưa có dữ liệu vàng theo tháng.</td></tr>';
+    $('goldMonthlyRows').innerHTML = goldMonthlyRows.join('') || '<tr><td colspan="5" class="empty">Chưa có dữ liệu vàng theo tháng.</td></tr>';
     const cursor = parseMonth(GOLD_START_MONTH);
     const finalMonth = parseMonth(latestMonth) > lastMonth ? parseMonth(latestMonth) : lastMonth;
     const contributionRows = [];
@@ -156,14 +160,14 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
             cumulativeTotal += totalForEntry;
             const amountCells = CONTRIBUTION_FIELDS.map(field =>
                 `<td>${formatAmountInput(contribution[field], month, field, id, !contributionsReady)}</td>`
-            ).join('');
+            );
             const cashCell = `<td>${formatCalculatedCash(getContributionCash(contribution), month)}</td>`;
             const dateCell = formatDateInput(contribution.purchaseDate, month, id, !contributionsReady);
             const statusCell = formatStatusSelect(contribution.status, month, id, !contributionsReady);
             const deleteButton = contributions.some(item => item.id === id)
                 ? `<button class="icon-btn delete" type="button" title="Xóa đợt góp" aria-label="Xóa đợt góp ${period + 1}" data-delete-contribution="${escapeHTML(id)}"${!contributionsReady ? ' disabled' : ''}>⌫</button>`
                 : '';
-            contributionRows.push(`<tr><td>${++period}</td><td>${monthLabel(month)}</td>${amountCells.slice(0, 4)}${cashCell}${amountCells.slice(4)}<td class="gold-contribution-total">${money(totalForEntry)}<small>Dư: ${money(cumulativeTotal)}</small></td><td>${dateCell}<small>${movement.purchased ? `Đã mua ${formatQuantity(movement.purchased)}` : ''}${movement.withdrawn ? `Đã lấy ra ${formatQuantity(movement.withdrawn)}` : ''}</small></td><td>${statusCell}</td><td><div class="actions"><button class="icon-btn" type="button" title="Thêm đợt cùng tháng" aria-label="Thêm đợt cùng tháng ${monthLabel(month)}" data-add-contribution="${month}"${!contributionsReady ? ' disabled' : ''}>＋</button>${deleteButton}</div></td></tr>`);
+            contributionRows.push(`<tr><td>${++period}</td><td>${monthLabel(month)}</td>${amountCells.slice(0, 4).join('')}${cashCell}${amountCells.slice(4).join('')}<td class="gold-contribution-total">${money(totalForEntry)}<small>Dư: ${money(cumulativeTotal)}</small></td><td>${dateCell}<small>${movement.purchased ? `Đã mua ${formatQuantity(movement.purchased)}` : ''}${movement.withdrawn ? `Đã lấy ra ${formatQuantity(movement.withdrawn)}` : ''}</small></td><td>${statusCell}</td><td><div class="actions"><button class="icon-btn" type="button" title="Thêm đợt cùng tháng" aria-label="Thêm đợt cùng tháng ${monthLabel(month)}" data-add-contribution="${month}"${!contributionsReady ? ' disabled' : ''}>＋</button>${deleteButton}</div></td></tr>`);
         });
         cursor.setMonth(cursor.getMonth() + 1);
     }
@@ -175,7 +179,7 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
             const date = purchase.date.split('-').reverse().join('/');
             const type = purchase.type === 'withdrawal' ? 'Lấy ra' : 'Mua';
             const quantity = `${purchase.type === 'withdrawal' ? '−' : '+'}${formatQuantity(purchase.quantity)}`;
-            return `<tr><td>${date}</td><td>${type}</td><td>${quantity}</td><td>${escapeHTML(purchase.note || '—')}</td><td><div class="actions"><button class="icon-btn delete" type="button" title="Xóa giao dịch vàng" aria-label="Xóa giao dịch vàng" data-delete-gold="${escapeHTML(purchase.id)}">⌫</button></div></td></tr>`;
+            return `<tr><td>${date}</td><td>${type}</td><td>${quantity}</td><td>${escapeHTML(purchase.note || '—')}</td><td><div class="actions"><button class="icon-btn" type="button" title="Sửa giao dịch vàng" aria-label="Sửa giao dịch vàng ngày ${date}" data-edit-gold="${escapeHTML(purchase.id)}">Sửa</button><button class="icon-btn delete" type="button" title="Xóa giao dịch vàng" aria-label="Xóa giao dịch vàng" data-delete-gold="${escapeHTML(purchase.id)}">⌫</button></div></td></tr>`;
         }).join('')
         : '<tr><td colspan="5" class="empty">Chưa có giao dịch vàng.</td></tr>';
 }
