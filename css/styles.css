@@ -1514,7 +1514,7 @@ td {
   min-width: 100%
 }
 
-.gold-contribution-table th:nth-child(1),
+.gold-contribution-table thead tr:first-child th:nth-child(1),
 .gold-contribution-table td:nth-child(1) {
   position: sticky;
   left: 0;
@@ -1524,7 +1524,7 @@ td {
   z-index: 2
 }
 
-.gold-contribution-table th:nth-child(2),
+.gold-contribution-table thead tr:first-child th:nth-child(2),
 .gold-contribution-table td:nth-child(2) {
   position: sticky;
   left: 56px;
@@ -1535,8 +1535,8 @@ td {
   box-shadow: 2px 0 4px #18263b12
 }
 
-.gold-contribution-table thead th:nth-child(1),
-.gold-contribution-table thead th:nth-child(2) {
+.gold-contribution-table thead tr:first-child th:nth-child(1),
+.gold-contribution-table thead tr:first-child th:nth-child(2) {
   z-index: 4
 }
 
