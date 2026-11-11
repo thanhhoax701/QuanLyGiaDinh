@@ -1369,24 +1369,26 @@ td {
   font-weight: 650
 }
 
+.gold-purchase-toggle {
+  flex: 0 0 auto
+}
+
 .gold-purchase-form {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
-  align-items: end;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #f8faff
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px
 }
 
 .gold-purchase-form .field {
-  min-width: 0;
-  margin-bottom: 0
+  min-width: 0
 }
 
-.gold-purchase-form .btn {
-  min-height: 40px
+.gold-transaction-modal {
+  width: min(520px, 100%)
+}
+
+.gold-purchase-form .modal-actions {
+  grid-column: 1 / -1
 }
 
 .gold-contribution-summary {
@@ -2112,13 +2114,11 @@ main {
   }
 
   .gold-purchase-form {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px
+    grid-template-columns: 1fr
   }
 
-  .gold-purchase-form .field:last-of-type,
-  .gold-purchase-form>.btn {
-    grid-column: 1/-1
+  .gold-purchase-form .modal-actions {
+    grid-column: auto
   }
 }
 

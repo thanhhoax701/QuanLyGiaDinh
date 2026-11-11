@@ -173,6 +173,7 @@
                 <h2>Quỹ vàng</h2>
                 <p>Theo dõi số vàng mua vào, lấy ra và tiền tích góp theo tháng</p>
               </div>
+              <button class="btn gold-purchase-toggle" id="goldPurchaseToggle" type="button" disabled>＋ Ghi nhận giao dịch vàng</button>
             </div>
             <div class="gold-summary">
               <div>
@@ -185,29 +186,6 @@
               <span class="eyebrow">TỔNG TIỀN TÍCH GÓP</span>
               <strong id="goldContributionTotal">0 ₫</strong>
             </div>
-            <form class="gold-purchase-form" id="goldPurchaseForm">
-              <div class="field">
-                <label for="goldPurchaseDate">Ngày giao dịch *</label>
-                <input id="goldPurchaseDate" type="date" required />
-              </div>
-              <div class="field">
-                <label for="goldTransactionType">Loại giao dịch *</label>
-                <select id="goldTransactionType">
-                  <option value="purchase">Mua vàng</option>
-                  <option value="withdrawal">Lấy vàng ra</option>
-                </select>
-              </div>
-              <div class="field">
-                <label for="goldPurchaseQuantity">Số lượng (chỉ) *</label>
-                <input id="goldPurchaseQuantity" type="number" min="0.01" step="0.01" required placeholder="Ví dụ: 0.5" />
-              </div>
-              <div class="field">
-                <label for="goldPurchaseNote">Ghi chú</label>
-                <input id="goldPurchaseNote" maxlength="200" placeholder="Ví dụ: Lấy vàng ra" />
-              </div>
-              <button class="btn" id="goldPurchaseSubmit" type="submit" disabled>＋ Ghi nhận giao dịch vàng</button>
-              <button class="btn secondary" id="goldPurchaseCancelEdit" type="button" hidden>Hủy sửa</button>
-            </form>
             <div class="panel-title top-gap">
               <div>
                 <h2>Dư vàng theo tháng</h2>
@@ -416,6 +394,39 @@
             <button type="button" class="btn secondary" id="cancelModal">
               Hủy</button
             ><button class="btn" type="submit">Lưu giao dịch</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="modal-backdrop" id="goldTransactionBackdrop">
+      <div class="modal gold-transaction-modal" role="dialog" aria-modal="true" aria-labelledby="goldTransactionTitle">
+        <div class="modal-head">
+          <h2 id="goldTransactionTitle">Ghi nhận giao dịch vàng</h2>
+          <button class="close" id="closeGoldTransactionModal" type="button" aria-label="Đóng">✕</button>
+        </div>
+        <form class="gold-purchase-form" id="goldPurchaseForm">
+          <div class="field">
+            <label for="goldPurchaseDate">Ngày giao dịch *</label>
+            <input id="goldPurchaseDate" type="date" required />
+          </div>
+          <div class="field">
+            <label for="goldTransactionType">Loại giao dịch *</label>
+            <select id="goldTransactionType">
+              <option value="purchase">Mua vàng</option>
+              <option value="withdrawal">Lấy vàng ra</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="goldPurchaseQuantity">Số lượng (chỉ) *</label>
+            <input id="goldPurchaseQuantity" type="number" min="0.01" step="0.01" required placeholder="Ví dụ: 0.5" />
+          </div>
+          <div class="field">
+            <label for="goldPurchaseNote">Ghi chú</label>
+            <input id="goldPurchaseNote" maxlength="200" placeholder="Ví dụ: Lấy vàng ra" />
+          </div>
+          <div class="modal-actions">
+            <button class="btn secondary" id="goldPurchaseCancelEdit" type="button">Hủy</button>
+            <button class="btn" id="goldPurchaseSubmit" type="submit" disabled>Lưu giao dịch</button>
           </div>
         </form>
       </div>

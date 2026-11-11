@@ -128,6 +128,7 @@ function startGoldPurchaseSync() {
   stopGoldPurchaseListener?.();
   goldCloudReady = false;
   $('goldPurchaseSubmit').disabled = true;
+  $('goldPurchaseToggle').disabled = true;
   let firstSnapshot = true;
   stopGoldPurchaseListener = observeGoldPurchases(async remotePurchases => {
     if (firstSnapshot) {
@@ -138,6 +139,7 @@ function startGoldPurchaseSync() {
           goldPurchases = localPurchases;
           goldCloudReady = true;
           $('goldPurchaseSubmit').disabled = false;
+          $('goldPurchaseToggle').disabled = false;
           await persistGoldPurchases('Đã chuyển quỹ vàng lên Firebase');
           return;
         }
@@ -148,6 +150,7 @@ function startGoldPurchaseSync() {
       saveGoldPurchases(goldPurchases);
       goldCloudReady = true;
       $('goldPurchaseSubmit').disabled = false;
+      $('goldPurchaseToggle').disabled = false;
       renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
       return;
     }
@@ -158,6 +161,7 @@ function startGoldPurchaseSync() {
   }, error => {
     goldCloudReady = false;
     $('goldPurchaseSubmit').disabled = true;
+    $('goldPurchaseToggle').disabled = true;
     console.error('Không thể đồng bộ quỹ vàng qua Firebase:', error);
     toast(error.code === 'PERMISSION_DENIED'
       ? 'Firebase từ chối quyền truy cập quỹ vàng. Kiểm tra Database Rules.'
@@ -667,6 +671,13 @@ $('reportMonth').value = currentMonth;
 $('reportMonth').addEventListener('change', render);
 $('goldPurchaseDate').value = dateKey(new Date());
 $('goldPurchaseDate').max = dateKey(new Date());
+$('goldPurchaseToggle').addEventListener('click', () => {
+  if (editingGoldPurchaseId) return;
+  $('goldPurchaseDate').value = dateKey(new Date());
+  $('goldTransactionTitle').textContent = 'Ghi nhận giao dịch vàng';
+  $('goldTransactionBackdrop').classList.add('show');
+  $('goldPurchaseQuantity').focus();
+});
 $('goldPurchaseForm').addEventListener('submit', event => {
   event.preventDefault();
   if (!goldCloudReady) {
@@ -699,19 +710,18 @@ $('goldPurchaseForm').addEventListener('submit', event => {
     return;
   }
   goldPurchases.push(purchase);
-  $('goldPurchaseQuantity').value = '';
-  $('goldPurchaseNote').value = '';
+  resetGoldPurchaseForm();
   void persistGoldPurchases(type === 'withdrawal' ? 'Đã ghi nhận lấy vàng ra' : 'Đã ghi nhận mua vàng');
 });
-$('goldPurchaseCancelEdit').addEventListener('click', resetGoldPurchaseForm);
-
 function resetGoldPurchaseForm() {
   editingGoldPurchaseId = null;
   $('goldPurchaseForm').reset();
   $('goldPurchaseDate').value = dateKey(new Date());
   $('goldTransactionType').value = 'purchase';
-  $('goldPurchaseSubmit').textContent = '＋ Ghi nhận giao dịch vàng';
-  $('goldPurchaseCancelEdit').hidden = true;
+  $('goldPurchaseSubmit').textContent = 'Lưu giao dịch';
+  $('goldTransactionTitle').textContent = 'Ghi nhận giao dịch vàng';
+  $('goldTransactionBackdrop').classList.remove('show');
+  $('goldPurchaseToggle').focus();
 }
 
 function startEditingGoldPurchase(purchase) {
@@ -721,10 +731,21 @@ function startEditingGoldPurchase(purchase) {
   $('goldPurchaseQuantity').value = purchase.quantity;
   $('goldPurchaseNote').value = purchase.note || '';
   $('goldPurchaseSubmit').textContent = 'Lưu thay đổi';
-  $('goldPurchaseCancelEdit').hidden = false;
-  $('goldPurchaseForm').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  $('goldTransactionTitle').textContent = 'Sửa giao dịch vàng';
+  $('goldTransactionBackdrop').classList.add('show');
   $('goldPurchaseQuantity').focus();
 }
+
+$('goldPurchaseCancelEdit').addEventListener('click', resetGoldPurchaseForm);
+$('closeGoldTransactionModal').addEventListener('click', resetGoldPurchaseForm);
+$('goldTransactionBackdrop').addEventListener('click', event => {
+  if (event.target === $('goldTransactionBackdrop')) resetGoldPurchaseForm();
+});
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && $('goldTransactionBackdrop').classList.contains('show')) {
+    resetGoldPurchaseForm();
+  }
+});
 
 $('exportReportBtn').addEventListener('click', () => {
   try {
@@ -807,6 +828,7 @@ observeAuth(user => {
     goldCloudReady = false;
     goldContributionsCloudReady = false;
     $('goldPurchaseSubmit').disabled = true;
+    $('goldPurchaseToggle').disabled = true;
     renderGoldFund(goldPurchases, goldContributions, false);
     $('appShell').hidden = true;
     $('authScreen').hidden = false;
