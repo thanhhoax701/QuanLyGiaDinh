@@ -1414,7 +1414,20 @@ td {
   font-weight: 400
 }
 
+.gold-purchase-details {
+  display: none;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400
+}
+
 .gold-month-details summary {
+  width: max-content;
+  color: #2675f5;
+  cursor: pointer
+}
+
+.gold-purchase-details summary {
   width: max-content;
   color: #2675f5;
   cursor: pointer
@@ -1422,12 +1435,32 @@ td {
 
 .gold-month-details-info {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 4px 10px;
   color: var(--muted)
 }
 
+.gold-purchase-details-info {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  color: var(--muted)
+}
+
+.gold-month-details-info span,
+.gold-month-details-info strong,
+.gold-purchase-details-info span,
+.gold-purchase-details-info strong {
+  min-width: 0;
+  overflow-wrap: anywhere
+}
+
 .gold-month-details-info strong {
+  color: var(--text);
+  font-weight: 500
+}
+
+.gold-purchase-details-info strong {
   color: var(--text);
   font-weight: 500
 }
@@ -2121,6 +2154,94 @@ main {
 @media(max-width:680px) {
   .topbar.report-mode {
     grid-template-columns: minmax(0, 1fr) auto
+  }
+
+  .gold-month-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed
+  }
+
+  .gold-month-table th,
+  .gold-month-table td {
+    padding: 10px 6px
+  }
+
+  .gold-month-table th:nth-child(1),
+  .gold-month-table td:nth-child(1) {
+    width: 40%;
+    white-space: normal
+  }
+
+  .gold-month-table th:nth-child(4),
+  .gold-month-table td:nth-child(4) {
+    width: 36%;
+    white-space: normal
+  }
+
+  .gold-month-table th:nth-child(5),
+  .gold-month-table td:nth-child(5) {
+    width: 24%;
+    text-align: center;
+    white-space: normal
+  }
+
+  .gold-month-table .actions {
+    justify-content: center
+  }
+
+  .gold-month-table .icon-btn {
+    padding: 5px 7px
+  }
+
+  .gold-purchase-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed
+  }
+
+  .gold-purchase-table th,
+  .gold-purchase-table td {
+    padding: 10px 6px
+  }
+
+  .gold-purchase-table th:nth-child(2),
+  .gold-purchase-table td:nth-child(2),
+  .gold-purchase-table th:nth-child(4),
+  .gold-purchase-table td:nth-child(4) {
+    display: none
+  }
+
+  .gold-purchase-table th:nth-child(1),
+  .gold-purchase-table td:nth-child(1) {
+    width: 32%;
+    white-space: normal
+  }
+
+  .gold-purchase-table th:nth-child(3),
+  .gold-purchase-table td:nth-child(3) {
+    width: 32%;
+    white-space: normal
+  }
+
+  .gold-purchase-table th:nth-child(5),
+  .gold-purchase-table td:nth-child(5) {
+    width: 36%;
+    text-align: center;
+    white-space: normal
+  }
+
+  .gold-purchase-details {
+    display: block
+  }
+
+  .gold-purchase-table .actions {
+    justify-content: center;
+    gap: 3px
+  }
+
+  .gold-purchase-table .icon-btn {
+    padding: 5px 6px
   }
 
   .gold-summary {

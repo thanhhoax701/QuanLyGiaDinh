@@ -180,7 +180,9 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
             const date = purchase.date.split('-').reverse().join('/');
             const type = purchase.type === 'withdrawal' ? 'Lấy ra' : 'Mua';
             const quantity = `${purchase.type === 'withdrawal' ? '−' : '+'}${formatQuantity(purchase.quantity)}`;
-            return `<tr><td>${date}</td><td>${type}</td><td>${quantity}</td><td>${escapeHTML(purchase.note || '—')}</td><td><div class="actions"><button class="icon-btn" type="button" title="Sửa giao dịch vàng" aria-label="Sửa giao dịch vàng ngày ${date}" data-edit-gold="${escapeHTML(purchase.id)}">Sửa</button><button class="icon-btn delete" type="button" title="Xóa giao dịch vàng" aria-label="Xóa giao dịch vàng" data-delete-gold="${escapeHTML(purchase.id)}">⌫</button></div></td></tr>`;
+            const note = escapeHTML(purchase.note || '—');
+            const mobileDetails = `<details class="gold-purchase-details"><summary>Xem thêm</summary><div class="gold-purchase-details-info"><span>Loại</span><strong>${type}</strong><span>Ghi chú</span><strong>${note}</strong></div></details>`;
+            return `<tr><td>${date}${mobileDetails}</td><td>${type}</td><td>${quantity}</td><td>${note}</td><td><div class="actions"><button class="icon-btn" type="button" title="Sửa giao dịch vàng" aria-label="Sửa giao dịch vàng ngày ${date}" data-edit-gold="${escapeHTML(purchase.id)}">Sửa</button><button class="icon-btn delete" type="button" title="Xóa giao dịch vàng" aria-label="Xóa giao dịch vàng" data-delete-gold="${escapeHTML(purchase.id)}">⌫</button></div></td></tr>`;
         }).join('')
         : '<tr><td colspan="5" class="empty">Chưa có giao dịch vàng.</td></tr>';
 }
