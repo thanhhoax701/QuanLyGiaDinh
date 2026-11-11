@@ -136,10 +136,10 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
         goldMonthlyRows.push(`<tr><td>${monthLabel(month)}${monthlyDetails}</td><td class="gold-month-movement">${formatQuantity(movement.purchased)}</td><td class="gold-month-movement">${formatQuantity(movement.withdrawn)}</td><td><strong>${formatQuantity(monthlyGoldTotal)}</strong></td><td><div class="actions">${editButton}</div></td></tr>`);
         goldCursor.setMonth(goldCursor.getMonth() + 1);
     }
-    $('goldMonthlyRows').innerHTML = goldMonthlyRows.join('') || '<tr><td colspan="3" class="empty">Chưa có dữ liệu vàng theo tháng.</td></tr>';
+    $('goldMonthlyRows').innerHTML = goldMonthlyRows.reverse().join('') || '<tr><td colspan="3" class="empty">Chưa có dữ liệu vàng theo tháng.</td></tr>';
     const cursor = parseMonth(GOLD_START_MONTH);
     const finalMonth = parseMonth(latestMonth) > lastMonth ? parseMonth(latestMonth) : lastMonth;
-    const contributionRows = [];
+    const contributionMonthRows = [];
     let period = 0;
     let cumulativeTotal = 0;
     const contributionsByMonth = new Map();
@@ -154,6 +154,7 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
         const month = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
         const entries = contributionsByMonth.get(month) || [{ ...EMPTY_CONTRIBUTION, id: month }];
         const movement = monthPurchases.get(month) || { purchased: 0, withdrawn: 0 };
+        const monthRows = [];
         entries.sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || a.id.localeCompare(b.id));
         entries.forEach(contribution => {
             const id = contribution.id;
@@ -168,13 +169,14 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
             const deleteButton = contributions.some(item => item.id === id)
                 ? `<button class="icon-btn delete" type="button" title="Xóa đợt góp" aria-label="Xóa đợt góp ${period + 1}" data-delete-contribution="${escapeHTML(id)}"${!contributionsReady ? ' disabled' : ''}>⌫</button>`
                 : '';
-            contributionRows.push(`<tr><td>${++period}</td><td>${monthLabel(month)}</td>${amountCells.slice(0, 4).join('')}${cashCell}${amountCells.slice(4).join('')}<td class="gold-contribution-total">${money(totalForEntry)}<small>Dư: ${money(cumulativeTotal)}</small></td><td>${dateCell}<small>${movement.purchased ? `Đã mua ${formatQuantity(movement.purchased)}` : ''}${movement.withdrawn ? `Đã lấy ra ${formatQuantity(movement.withdrawn)}` : ''}</small></td><td>${statusCell}</td><td><div class="actions"><button class="icon-btn" type="button" title="Thêm đợt cùng tháng" aria-label="Thêm đợt cùng tháng ${monthLabel(month)}" data-add-contribution="${month}"${!contributionsReady ? ' disabled' : ''}>＋</button>${deleteButton}</div></td></tr>`);
+            monthRows.push(`<tr><td>${++period}</td><td>${monthLabel(month)}</td>${amountCells.slice(0, 4).join('')}${cashCell}${amountCells.slice(4).join('')}<td class="gold-contribution-total">${money(totalForEntry)}<small>Dư: ${money(cumulativeTotal)}</small></td><td>${dateCell}<small>${movement.purchased ? `Đã mua ${formatQuantity(movement.purchased)}` : ''}${movement.withdrawn ? `Đã lấy ra ${formatQuantity(movement.withdrawn)}` : ''}</small></td><td>${statusCell}</td><td><div class="actions"><button class="icon-btn" type="button" title="Thêm đợt cùng tháng" aria-label="Thêm đợt cùng tháng ${monthLabel(month)}" data-add-contribution="${month}"${!contributionsReady ? ' disabled' : ''}>＋</button>${deleteButton}</div></td></tr>`);
         });
+        contributionMonthRows.push(monthRows);
         cursor.setMonth(cursor.getMonth() + 1);
     }
 
     $('goldContributionTotal').textContent = money(cumulativeTotal);
-    $('goldContributionRows').innerHTML = contributionRows.join('') || '<tr><td colspan="15" class="empty">Chưa có đợt tích góp.</td></tr>';
+    $('goldContributionRows').innerHTML = contributionMonthRows.reverse().flat().join('') || '<tr><td colspan="15" class="empty">Chưa có đợt tích góp.</td></tr>';
     $('goldPurchaseRows').innerHTML = validPurchases.length
         ? validPurchases.slice().sort((a, b) => b.date.localeCompare(a.date)).map(purchase => {
             const date = purchase.date.split('-').reverse().join('/');
