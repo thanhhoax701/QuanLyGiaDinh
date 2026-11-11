@@ -1369,10 +1369,6 @@ td {
   font-weight: 650
 }
 
-.gold-purchase-toggle {
-  flex: 0 0 auto
-}
-
 .gold-purchase-form {
   display: grid;
   grid-template-columns: 1fr 1fr;
