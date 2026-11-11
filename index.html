@@ -171,7 +171,7 @@
             <div class="panel-title">
               <div>
                 <h2>Quỹ vàng</h2>
-                <p>Theo dõi số vàng đã mua riêng với tiền tích góp theo tháng</p>
+                <p>Theo dõi số vàng mua vào, lấy ra và tiền tích góp theo tháng</p>
               </div>
             </div>
             <div class="gold-summary">
@@ -187,8 +187,15 @@
             </div>
             <form class="gold-purchase-form" id="goldPurchaseForm">
               <div class="field">
-                <label for="goldPurchaseDate">Ngày mua *</label>
+                <label for="goldPurchaseDate">Ngày giao dịch *</label>
                 <input id="goldPurchaseDate" type="date" required />
+              </div>
+              <div class="field">
+                <label for="goldTransactionType">Loại giao dịch *</label>
+                <select id="goldTransactionType">
+                  <option value="purchase">Mua vàng</option>
+                  <option value="withdrawal">Lấy vàng ra</option>
+                </select>
               </div>
               <div class="field">
                 <label for="goldPurchaseQuantity">Số lượng (chỉ) *</label>
@@ -196,14 +203,14 @@
               </div>
               <div class="field">
                 <label for="goldPurchaseNote">Ghi chú</label>
-                <input id="goldPurchaseNote" maxlength="200" placeholder="Ghi chú giao dịch mua" />
+                <input id="goldPurchaseNote" maxlength="200" placeholder="Ví dụ: Đưa cha 0,5 chỉ" />
               </div>
-              <button class="btn" id="goldPurchaseSubmit" type="submit" disabled>＋ Ghi nhận mua vàng</button>
+              <button class="btn" id="goldPurchaseSubmit" type="submit" disabled>＋ Ghi nhận giao dịch vàng</button>
             </form>
             <div class="panel-title top-gap">
               <div>
                 <h2>Dư vàng theo tháng</h2>
-                <p>Số dư vàng được cộng dồn từ các lần mua</p>
+                <p>Số dư vàng = vàng đã mua - vàng đã lấy ra</p>
               </div>
             </div>
             <div class="table-wrap">
@@ -212,6 +219,7 @@
                   <tr>
                     <th>Tháng</th>
                     <th>Đã mua trong tháng</th>
+                    <th>Đã lấy ra trong tháng</th>
                     <th>Dư vàng cuối tháng</th>
                   </tr>
                 </thead>
@@ -221,7 +229,7 @@
             <div class="panel-title top-gap">
               <div>
                 <h2>Danh sách tích góp</h2>
-                <p>Mục tiêu và khoản góp được nhập riêng theo từng người, từng tháng. Tiền tự tính bằng tổng KPI và lương của cả hai; tổng tiền = Tiền + Quỹ + Heo + Bù - Nợ.</p>
+                <p>Mỗi đợt góp là một dòng; có thể thêm nhiều đợt trong cùng tháng. Tiền tự tính bằng tổng KPI và lương của cả hai; tổng đợt = Tiền + Quỹ + Heo + Bù - Nợ.</p>
               </div>
             </div>
             <div class="table-wrap">
@@ -230,8 +238,8 @@
                   <tr>
                     <th rowspan="2">Đợt</th>
                     <th rowspan="2">Tháng</th>
-                    <th colspan="3">Thanh Hòa</th>
-                    <th colspan="3">Ngọc Yến</th>
+                    <th colspan="2">Thanh Hòa</th>
+                    <th colspan="2">Ngọc Yến</th>
                     <th rowspan="2">Tiền</th>
                     <th rowspan="2">Quỹ</th>
                     <th rowspan="2">Heo</th>
@@ -240,28 +248,28 @@
                     <th rowspan="2">Tổng tiền</th>
                     <th rowspan="2">Ngày mua</th>
                     <th rowspan="2">Trạng thái</th>
+                    <th rowspan="2">Thao tác</th>
                   </tr>
                   <tr>
                     <th>KPI</th>
                     <th>Lương</th>
-                    <th>Mục tiêu</th>
                     <th>KPI</th>
                     <th>Lương</th>
-                    <th>Mục tiêu</th>
                   </tr>
                 </thead>
                 <tbody id="goldContributionRows"></tbody>
               </table>
             </div>
             <div class="panel-title top-gap">
-              <h2>Lịch sử mua vàng</h2>
-              <span class="eyebrow" id="goldPurchaseCount">0 lần mua</span>
+              <h2>Lịch sử giao dịch vàng</h2>
+              <span class="eyebrow" id="goldPurchaseCount">0 giao dịch</span>
             </div>
             <div class="table-wrap">
               <table class="gold-purchase-table">
                 <thead>
                   <tr>
-                    <th>Ngày mua</th>
+                    <th>Ngày</th>
+                    <th>Loại</th>
                     <th>Số lượng</th>
                     <th>Ghi chú</th>
                     <th>Thao tác</th>

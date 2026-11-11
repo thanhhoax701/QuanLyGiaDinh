@@ -1371,7 +1371,7 @@ td {
 
 .gold-purchase-form {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
   align-items: end;
   gap: 12px;
   padding: 16px;
@@ -1429,11 +1429,6 @@ td {
   min-width: 108px;
   padding: 7px 8px;
   text-align: right
-}
-
-.gold-contribution-table td:nth-child(5),
-.gold-contribution-table td:nth-child(8) {
-  min-width: 148px
 }
 
 .gold-contribution-table small {

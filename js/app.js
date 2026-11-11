@@ -1,5 +1,5 @@
 import { $, currentMonth, dateKey, loadTransactions, saveTransactions, loadGoldPurchases, saveGoldPurchases, loadGoldContributions, saveGoldContributions } from './modules/data.js';
-import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions, observeGoldPurchases, writeGoldPurchases, observeGoldContributions, writeGoldContributions, writeGoldContribution } from './modules/firebase.js';
+import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions, observeGoldPurchases, writeGoldPurchases, observeGoldContributions, writeGoldContributions, writeGoldContribution, removeGoldContribution } from './modules/firebase.js';
 import { getDailyLimitDebtBalance, renderReports } from './modules/reports.js';
 import { getFilteredTransactions } from './modules/transactions.js';
 import { renderGoldFund } from './modules/gold.js';
@@ -286,11 +286,60 @@ document.addEventListener('click', event => {
       return;
     }
     const purchase = goldPurchases.find(item => item.id === deleteGold.dataset.deleteGold);
-    if (purchase && confirm(`Xóa giao dịch mua ${Number(purchase.quantity).toLocaleString('vi-VN')} chỉ vàng?`)) {
+    const typeLabel = purchase?.type === 'withdrawal' ? 'lấy ra' : 'mua';
+    if (purchase && confirm(`Xóa giao dịch ${typeLabel} ${Number(purchase.quantity).toLocaleString('vi-VN')} chỉ vàng?`)) {
       goldPurchases = goldPurchases.filter(item => item.id !== purchase.id);
-      void persistGoldPurchases('Đã xóa giao dịch mua vàng');
+      void persistGoldPurchases('Đã xóa giao dịch vàng');
     }
   }
+});
+
+$('goldContributionRows').addEventListener('click', event => {
+  const add = event.target.closest('[data-add-contribution]');
+  const remove = event.target.closest('[data-delete-contribution]');
+  if (!add && !remove) return;
+  if (!goldContributionsCloudReady) {
+    toast('Đang tải danh sách tích góp. Vui lòng thử lại sau.');
+    return;
+  }
+  if (add) {
+    const month = add.dataset.addContribution;
+    if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
+    const entries = goldContributions.filter(item => (item.month || item.id.slice(0, 7)) === month);
+    const nextOrder = entries.reduce((max, item) => Math.max(max, Number(item.order) || 0), 0) + 1;
+    const contribution = {
+      id: `${month}-${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`}`,
+      month,
+      order: nextOrder,
+      thanhHoaKpi: 0,
+      thanhHoaSalary: 0,
+      thanhHoaTarget: 0,
+      ngocYenKpi: 0,
+      ngocYenSalary: 0,
+      ngocYenTarget: 0,
+      cash: 0,
+      fund: 0,
+      pig: 0,
+      extra: 0,
+      debt: 0,
+      purchaseDate: '',
+      status: 'CHƯA MUA'
+    };
+    goldContributions = [...goldContributions, contribution];
+    void persistGoldContribution(contribution);
+    return;
+  }
+
+  const id = remove.dataset.deleteContribution;
+  const contribution = goldContributions.find(item => item.id === id);
+  if (!contribution || !confirm(`Xóa đợt tích góp tháng ${contribution.month || contribution.id.slice(0, 7)}?`)) return;
+  goldContributions = goldContributions.filter(item => item.id !== id);
+  saveGoldContributions(goldContributions);
+  renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+  removeGoldContribution(id).catch(error => {
+    console.error('Không thể xóa đợt tích góp khỏi Firebase:', error);
+    toast('Không thể xóa đợt tích góp khỏi Firebase. Kiểm tra kết nối và quyền database.');
+  });
 });
 
 $('goldContributionRows').addEventListener('change', event => {
@@ -301,19 +350,21 @@ $('goldContributionRows').addEventListener('change', event => {
     renderGoldFund(goldPurchases, goldContributions, false);
     return;
   }
-  const { month, contribution: field } = input.dataset;
+  const { month, contribution: field, contributionId: id } = input.dataset;
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
   const amountFields = [
-    'thanhHoaKpi', 'thanhHoaSalary', 'thanhHoaTarget',
-    'ngocYenKpi', 'ngocYenSalary', 'ngocYenTarget',
+    'thanhHoaKpi', 'thanhHoaSalary',
+    'ngocYenKpi', 'ngocYenSalary',
     'fund', 'pig', 'extra', 'debt'
   ];
   if (!amountFields.includes(field) && field !== 'purchaseDate' && field !== 'status') return;
-  const current = goldContributions.find(item => item.id === month);
+  const current = goldContributions.find(item => item.id === id);
   const contribution = current
     ? { ...current }
     : {
-      id: month,
+      id,
+      month,
+      order: 1,
       thanhHoaKpi: 0,
       thanhHoaSalary: 0,
       thanhHoaTarget: 0,
@@ -364,7 +415,7 @@ $('goldContributionRows').addEventListener('change', event => {
   }
 
   if (current) {
-    goldContributions = goldContributions.map(item => item.id === month ? contribution : item);
+    goldContributions = goldContributions.map(item => item.id === id ? contribution : item);
   } else {
     goldContributions = [...goldContributions, contribution];
   }
@@ -583,7 +634,7 @@ $('goldPurchaseForm').addEventListener('submit', event => {
   }
   const date = $('goldPurchaseDate').value;
   if (!date || date > dateKey(new Date())) {
-    toast('Ngày mua vàng không thể ở tương lai.');
+    toast('Ngày giao dịch vàng không thể ở tương lai.');
     return;
   }
   const quantity = Number($('goldPurchaseQuantity').value);
@@ -591,15 +642,17 @@ $('goldPurchaseForm').addEventListener('submit', event => {
     toast('Vui lòng nhập số lượng vàng lớn hơn 0.');
     return;
   }
+  const type = $('goldTransactionType').value;
   goldPurchases.push({
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
     date,
     quantity,
+    type,
     note: $('goldPurchaseNote').value.trim()
   });
   $('goldPurchaseQuantity').value = '';
   $('goldPurchaseNote').value = '';
-  void persistGoldPurchases('Đã ghi nhận mua vàng');
+  void persistGoldPurchases(type === 'withdrawal' ? 'Đã ghi nhận lấy vàng ra' : 'Đã ghi nhận mua vàng');
 });
 $('exportReportBtn').addEventListener('click', () => {
   try {

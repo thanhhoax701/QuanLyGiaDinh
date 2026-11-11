@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
-import { getDatabase, onValue, ref, set, update } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
+import { getDatabase, onValue, ref, remove, set, update } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAI-RIffDR2eBT3ZTV9DLDE38_Oz7_PTTI',
@@ -86,4 +86,8 @@ export function writeGoldContributions(contributions) {
 
 export function writeGoldContribution(contribution) {
   return update(goldContributionsRef, { [contribution.id]: contribution });
+}
+
+export function removeGoldContribution(id) {
+  return remove(ref(database, `households/quanlygiadinh-94ced/goldFund/contributions/${id}`));
 }
