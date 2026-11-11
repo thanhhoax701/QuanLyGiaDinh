@@ -1407,6 +1407,50 @@ td {
   font-weight: 650
 }
 
+.gold-section-toggle {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-weight: inherit;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer
+}
+
+.gold-section-chevron {
+  display: block;
+  width: 9px;
+  height: 9px;
+  margin: -4px 2px 0 0;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  flex: 0 0 9px;
+  transform: rotate(45deg);
+  transition: transform .15s
+}
+
+.gold-section-header {
+  margin-bottom: 0
+}
+
+.gold-fund-section:not(.is-open) .gold-section-content {
+  display: none
+}
+
+.gold-fund-section.is-open .gold-section-content {
+  display: block;
+  margin-top: 10px
+}
+
+.gold-fund-section.is-open .gold-section-chevron {
+  transform: rotate(225deg);
+  margin-top: 4px
+}
+
 .gold-month-details {
   display: none;
   margin-top: 4px;
@@ -1468,6 +1512,20 @@ td {
 .gold-contribution-table {
   width: max-content;
   min-width: 100%
+}
+
+.gold-contribution-table th:nth-child(2),
+.gold-contribution-table td:nth-child(2) {
+  position: sticky;
+  left: 0;
+  min-width: 136px;
+  width: 136px;
+  background: var(--card);
+  z-index: 1
+}
+
+.gold-contribution-table thead th:nth-child(2) {
+  z-index: 2
 }
 
 .gold-contribution-table th,
@@ -2154,6 +2212,11 @@ main {
 @media(max-width:680px) {
   .topbar.report-mode {
     grid-template-columns: minmax(0, 1fr) auto
+  }
+
+  .gold-section-header h2 {
+    font-size: 15px;
+    line-height: 1.4
   }
 
   .gold-month-table {

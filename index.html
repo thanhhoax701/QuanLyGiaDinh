@@ -182,78 +182,90 @@
               <span class="eyebrow">TỔNG TIỀN TÍCH GÓP</span>
               <strong id="goldContributionTotal">0 ₫</strong>
             </div>
-            <div class="panel-title top-gap">
-              <div>
-                <h2>Dư vàng theo tháng</h2>
-                <p>Số dư vàng = vàng đã mua - vàng đã lấy ra</p>
+            <section class="gold-fund-section">
+              <div class="panel-title top-gap gold-section-header">
+                <div>
+                  <h2><button class="gold-section-toggle" type="button" data-gold-section-toggle aria-expanded="false">Dư vàng theo tháng<span class="gold-section-chevron" aria-hidden="true"></span></button></h2>
+                  <p>Số dư vàng = vàng đã mua - vàng đã lấy ra</p>
+                </div>
               </div>
-            </div>
-            <div class="table-wrap">
-              <table class="gold-month-table">
-                <thead>
-                  <tr>
-                    <th>Tháng</th>
-                    <th class="gold-month-movement">Đã mua trong tháng</th>
-                    <th class="gold-month-movement">Đã lấy ra trong tháng</th>
-                    <th>Dư vàng cuối tháng</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody id="goldMonthlyRows"></tbody>
-              </table>
-            </div>
-            <div class="panel-title top-gap">
-              <div>
-                <h2>Danh sách tích góp</h2>
-                <p>Mỗi đợt góp là một dòng; có thể thêm nhiều đợt trong cùng tháng. Tiền tự tính bằng tổng KPI và lương của cả hai; tổng đợt = Tiền + Quỹ + Heo + Bù - Nợ.</p>
+              <div class="gold-section-content">
+                <div class="table-wrap">
+                  <table class="gold-month-table">
+                    <thead>
+                      <tr>
+                        <th>Tháng</th>
+                        <th class="gold-month-movement">Đã mua trong tháng</th>
+                        <th class="gold-month-movement">Đã lấy ra trong tháng</th>
+                        <th>Dư vàng cuối tháng</th>
+                        <th>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody id="goldMonthlyRows"></tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-            <div class="table-wrap">
-              <table class="gold-contribution-table">
-                <thead>
-                  <tr>
-                    <th rowspan="2">Đợt</th>
-                    <th rowspan="2">Tháng</th>
-                    <th colspan="2">Thanh Hòa</th>
-                    <th colspan="2">Ngọc Yến</th>
-                    <th rowspan="2">Tiền</th>
-                    <th rowspan="2">Quỹ</th>
-                    <th rowspan="2">Heo</th>
-                    <th rowspan="2">Bù</th>
-                    <th rowspan="2">Nợ</th>
-                    <th rowspan="2">Tổng tiền</th>
-                    <th rowspan="2">Ngày mua</th>
-                    <th rowspan="2">Trạng thái</th>
-                    <th rowspan="2">Thao tác</th>
-                  </tr>
-                  <tr>
-                    <th>KPI</th>
-                    <th>Lương</th>
-                    <th>KPI</th>
-                    <th>Lương</th>
-                  </tr>
-                </thead>
-                <tbody id="goldContributionRows"></tbody>
-              </table>
-            </div>
-            <div class="panel-title top-gap">
-              <h2>Lịch sử giao dịch vàng</h2>
-              <span class="eyebrow" id="goldPurchaseCount">0 giao dịch</span>
-            </div>
-            <div class="table-wrap">
-              <table class="gold-purchase-table">
-                <thead>
-                  <tr>
-                    <th>Ngày</th>
-                    <th>Loại</th>
-                    <th>Số lượng</th>
-                    <th>Ghi chú</th>
-                    <th>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody id="goldPurchaseRows"></tbody>
-              </table>
-            </div>
+            </section>
+            <section class="gold-fund-section">
+              <div class="panel-title top-gap gold-section-header">
+                <div>
+                  <h2><button class="gold-section-toggle" type="button" data-gold-section-toggle aria-expanded="false">Danh sách tích góp<span class="gold-section-chevron" aria-hidden="true"></span></button></h2>
+                  <p>Mỗi đợt góp là một dòng; có thể thêm nhiều đợt trong cùng tháng. Tiền tự tính bằng tổng KPI và lương của cả hai; tổng đợt = Tiền + Quỹ + Heo + Bù - Nợ.</p>
+                </div>
+              </div>
+              <div class="gold-section-content">
+                <div class="table-wrap">
+                  <table class="gold-contribution-table">
+                    <thead>
+                      <tr>
+                        <th rowspan="2">Đợt</th>
+                        <th rowspan="2">Tháng</th>
+                        <th colspan="2">Thanh Hòa</th>
+                        <th colspan="2">Ngọc Yến</th>
+                        <th rowspan="2">Tiền</th>
+                        <th rowspan="2">Quỹ</th>
+                        <th rowspan="2">Heo</th>
+                        <th rowspan="2">Bù</th>
+                        <th rowspan="2">Nợ</th>
+                        <th rowspan="2">Tổng tiền</th>
+                        <th rowspan="2">Ngày mua</th>
+                        <th rowspan="2">Trạng thái</th>
+                        <th rowspan="2">Thao tác</th>
+                      </tr>
+                      <tr>
+                        <th>KPI</th>
+                        <th>Lương</th>
+                        <th>KPI</th>
+                        <th>Lương</th>
+                      </tr>
+                    </thead>
+                    <tbody id="goldContributionRows"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+            <section class="gold-fund-section">
+              <div class="panel-title top-gap gold-section-header">
+                <h2><button class="gold-section-toggle" type="button" data-gold-section-toggle aria-expanded="false">Lịch sử giao dịch vàng<span class="gold-section-chevron" aria-hidden="true"></span></button></h2>
+                <span class="eyebrow" id="goldPurchaseCount">0 giao dịch</span>
+              </div>
+              <div class="gold-section-content">
+                <div class="table-wrap">
+                  <table class="gold-purchase-table">
+                    <thead>
+                      <tr>
+                        <th>Ngày</th>
+                        <th>Loại</th>
+                        <th>Số lượng</th>
+                        <th>Ghi chú</th>
+                        <th>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody id="goldPurchaseRows"></tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
           </div>
         </section>
         <section class="page" id="page-funds">
