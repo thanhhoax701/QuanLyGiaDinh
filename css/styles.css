@@ -1514,18 +1514,30 @@ td {
   min-width: 100%
 }
 
+.gold-contribution-table th:nth-child(1),
+.gold-contribution-table td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  min-width: 56px;
+  width: 56px;
+  background: var(--card);
+  z-index: 2
+}
+
 .gold-contribution-table th:nth-child(2),
 .gold-contribution-table td:nth-child(2) {
   position: sticky;
-  left: 0;
+  left: 56px;
   min-width: 136px;
   width: 136px;
   background: var(--card);
-  z-index: 1
+  z-index: 2;
+  box-shadow: 2px 0 4px #18263b12
 }
 
+.gold-contribution-table thead th:nth-child(1),
 .gold-contribution-table thead th:nth-child(2) {
-  z-index: 2
+  z-index: 4
 }
 
 .gold-contribution-table th,
