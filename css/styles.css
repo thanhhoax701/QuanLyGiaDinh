@@ -1407,6 +1407,31 @@ td {
   font-weight: 650
 }
 
+.gold-month-details {
+  display: none;
+  margin-top: 4px;
+  font-size: 12px;
+  font-weight: 400
+}
+
+.gold-month-details summary {
+  width: max-content;
+  color: #2675f5;
+  cursor: pointer
+}
+
+.gold-month-details-info {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  color: var(--muted)
+}
+
+.gold-month-details-info strong {
+  color: var(--text);
+  font-weight: 500
+}
+
 .gold-contribution-table {
   width: max-content;
   min-width: 100%
@@ -2107,6 +2132,15 @@ main {
 
   .gold-contribution-summary {
     padding: 13px 15px
+  }
+
+  .gold-month-table th.gold-month-movement,
+  .gold-month-table td.gold-month-movement {
+    display: none
+  }
+
+  .gold-month-details {
+    display: block
   }
 
   .gold-purchase-form {
