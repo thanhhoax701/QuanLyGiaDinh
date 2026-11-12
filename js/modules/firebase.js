@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
-import { getDatabase, onValue, ref, remove, set, update } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
+import { getDatabase, onValue, ref, update } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAI-RIffDR2eBT3ZTV9DLDE38_Oz7_PTTI',
@@ -19,6 +19,76 @@ const database = getDatabase(app);
 const transactionsRef = ref(database, 'households/quanlygiadinh-94ced/transactions');
 const goldPurchasesRef = ref(database, 'households/quanlygiadinh-94ced/goldFund/purchases');
 const goldContributionsRef = ref(database, 'households/quanlygiadinh-94ced/goldFund/contributions');
+
+function createRecordCollection(collectionRef) {
+  let records = Object.create(null);
+  let writeQueue = Promise.resolve();
+
+  function enqueueUpdate(createUpdates) {
+    const operation = writeQueue.then(async () => {
+      const updates = createUpdates();
+      const entries = Object.entries(updates);
+      if (!entries.length) return;
+
+      await update(collectionRef, updates);
+      for (const [id, value] of entries) {
+        if (value === null) delete records[id];
+        else records[id] = value;
+      }
+    });
+    writeQueue = operation.catch(() => {});
+    return operation;
+  }
+
+  function replace(items) {
+    const next = Object.fromEntries(items.map(item => [item.id, item]));
+    return enqueueUpdate(() => {
+      const updates = [];
+      for (const id of Object.keys(records)) {
+        if (!Object.prototype.hasOwnProperty.call(next, id)) updates.push([id, null]);
+      }
+      for (const [id, item] of Object.entries(next)) {
+        if (!Object.prototype.hasOwnProperty.call(records, id) || JSON.stringify(records[id]) !== JSON.stringify(item)) {
+          updates.push([id, item]);
+        }
+      }
+      return Object.fromEntries(updates);
+    });
+  }
+
+  function writeChanges(items) {
+    const changes = Object.fromEntries(items.map(item => [item.id, item]));
+    return enqueueUpdate(() => {
+      const updates = [];
+      for (const [id, item] of Object.entries(changes)) {
+        if (!Object.prototype.hasOwnProperty.call(records, id) || JSON.stringify(records[id]) !== JSON.stringify(item)) {
+          updates.push([id, item]);
+        }
+      }
+      return Object.fromEntries(updates);
+    });
+  }
+
+  function removeRecords(ids) {
+    return enqueueUpdate(() => Object.fromEntries(
+      ids.filter(id => Object.prototype.hasOwnProperty.call(records, id)).map(id => [id, null])
+    ));
+  }
+
+  function observe(callback, onError) {
+    return onValue(collectionRef, snapshot => {
+      const data = snapshot.val();
+      records = Object.assign(Object.create(null), data && typeof data === 'object' ? data : {});
+      callback(data && typeof data === 'object' ? Object.values(data) : null);
+    }, onError);
+  }
+
+  return { observe, replace, writeChanges, removeRecords };
+}
+
+const transactionRecords = createRecordCollection(transactionsRef);
+const goldPurchaseRecords = createRecordCollection(goldPurchasesRef);
+const goldContributionRecords = createRecordCollection(goldContributionsRef);
 
 export function observeAuth(callback, onError) {
   return onAuthStateChanged(auth, callback, onError);
@@ -49,45 +119,37 @@ export function logout() {
 }
 
 export function observeTransactions(callback, onError) {
-  return onValue(transactionsRef, snapshot => {
-    const data = snapshot.val();
-    callback(data && typeof data === 'object' ? Object.values(data) : null);
-  }, onError);
+  return transactionRecords.observe(callback, onError);
 }
 
 export function writeTransactions(transactions) {
-  const data = Object.fromEntries(transactions.map(transaction => [transaction.id, transaction]));
-  return set(transactionsRef, data);
+  return transactionRecords.replace(transactions);
 }
 
 export function observeGoldPurchases(callback, onError) {
-  return onValue(goldPurchasesRef, snapshot => {
-    const data = snapshot.val();
-    callback(data && typeof data === 'object' ? Object.values(data) : null);
-  }, onError);
+  return goldPurchaseRecords.observe(callback, onError);
 }
 
 export function writeGoldPurchases(purchases) {
-  const data = Object.fromEntries(purchases.map(purchase => [purchase.id, purchase]));
-  return set(goldPurchasesRef, data);
+  return goldPurchaseRecords.replace(purchases);
 }
 
 export function observeGoldContributions(callback, onError) {
-  return onValue(goldContributionsRef, snapshot => {
-    const data = snapshot.val();
-    callback(data && typeof data === 'object' ? Object.values(data) : null);
-  }, onError);
+  return goldContributionRecords.observe(callback, onError);
 }
 
 export function writeGoldContributions(contributions) {
-  const data = Object.fromEntries(contributions.map(contribution => [contribution.id, contribution]));
-  return set(goldContributionsRef, data);
+  return goldContributionRecords.replace(contributions);
+}
+
+export function writeGoldContributionChanges(contributions) {
+  return goldContributionRecords.writeChanges(contributions);
 }
 
 export function writeGoldContribution(contribution) {
-  return update(goldContributionsRef, { [contribution.id]: contribution });
+  return writeGoldContributionChanges([contribution]);
 }
 
 export function removeGoldContribution(id) {
-  return remove(ref(database, `households/quanlygiadinh-94ced/goldFund/contributions/${id}`));
+  return goldContributionRecords.removeRecords([id]);
 }

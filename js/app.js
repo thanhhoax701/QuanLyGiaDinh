@@ -1,5 +1,5 @@
 import { $, currentMonth, dateKey, loadTransactions, saveTransactions, loadGoldPurchases, saveGoldPurchases, loadGoldContributions, saveGoldContributions } from './modules/data.js';
-import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions, observeGoldPurchases, writeGoldPurchases, observeGoldContributions, writeGoldContributions, writeGoldContribution, removeGoldContribution } from './modules/firebase.js';
+import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions, observeGoldPurchases, writeGoldPurchases, observeGoldContributions, writeGoldContributions, writeGoldContributionChanges, removeGoldContribution } from './modules/firebase.js';
 import { getDailyLimitDebtBalance, renderReports } from './modules/reports.js';
 import { getFilteredTransactions } from './modules/transactions.js';
 import { getMergedContributionMonthGroups, getVisibleContributionColumns, renderGoldFund, saveMergedContributionMonthGroups, saveVisibleContributionColumns } from './modules/gold.js';
@@ -26,6 +26,12 @@ goldContributionColumnPicker.querySelectorAll('[data-contribution-column-toggle]
 function render() {
   renderReports(transactions);
   renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+}
+
+function sameRecords(current, incoming) {
+  if (current.length !== incoming.length) return false;
+  const currentById = new Map(current.map(record => [record.id, JSON.stringify(record)]));
+  return incoming.every(record => currentById.get(record.id) === JSON.stringify(record));
 }
 
 function refreshGoldUngroupButton() {
@@ -132,18 +138,16 @@ async function persistGoldContributions(contributions) {
     toast('Firebase chưa sẵn sàng; khoản tích góp chỉ được lưu trên thiết bị này.');
     return;
   }
-  for (const contribution of contributions) {
-    try {
-      await writeGoldContribution(contribution);
-    } catch (error) {
-      console.error('Không thể lưu khoản tích góp lên Firebase:', error);
-      if (error.code === 'PERMISSION_DENIED') {
-        toast('Firebase từ chối quyền ghi (PERMISSION_DENIED). Hãy publish Database Rules cho nhánh households/quanlygiadinh-94ced.');
-        continue;
-      }
-      const reason = error.code || error.message || 'không rõ nguyên nhân';
-      toast(`Lưu Firebase thất bại (${reason}). Dữ liệu vẫn còn trên thiết bị này.`);
+  try {
+    await writeGoldContributionChanges(contributions);
+  } catch (error) {
+    console.error('Không thể lưu khoản tích góp lên Firebase:', error);
+    if (error.code === 'PERMISSION_DENIED') {
+      toast('Firebase từ chối quyền ghi (PERMISSION_DENIED). Hãy publish Database Rules cho nhánh households/quanlygiadinh-94ced.');
+      return;
     }
+    const reason = error.code || error.message || 'không rõ nguyên nhân';
+    toast(`Lưu Firebase thất bại (${reason}). Dữ liệu vẫn còn trên thiết bị này.`);
   }
 }
 
@@ -281,7 +285,9 @@ function startGoldPurchaseSync() {
       return;
     }
 
-    goldPurchases = remotePurchases || [];
+    const nextPurchases = remotePurchases || [];
+    if (sameRecords(goldPurchases, nextPurchases)) return;
+    goldPurchases = nextPurchases;
     saveGoldPurchases(goldPurchases);
     renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
   }, error => {
@@ -339,7 +345,9 @@ function startGoldContributionSync() {
       return;
     }
 
-    goldContributions = remoteContributions || [];
+    const nextContributions = remoteContributions || [];
+    if (sameRecords(goldContributions, nextContributions)) return;
+    goldContributions = nextContributions;
     saveGoldContributions(goldContributions);
     renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
   }, error => {
@@ -384,7 +392,9 @@ function startTransactionSync(user) {
       return;
     }
 
-    transactions = remoteTransactions || [];
+    const nextTransactions = remoteTransactions || [];
+    if (sameRecords(transactions, nextTransactions)) return;
+    transactions = nextTransactions;
     saveTransactions(transactions);
     render();
   }, error => {
