@@ -1543,6 +1543,11 @@ td {
   width: min(520px, 100%)
 }
 
+.gold-merge-hint {
+  margin: 0;
+  line-height: 1.45
+}
+
 .gold-merge-month-options {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -2498,6 +2503,11 @@ main {
 
   .gold-merge-month-options {
     grid-template-columns: repeat(2, minmax(0, 1fr))
+  }
+
+  .gold-column-picker[open] .gold-column-picker-options {
+    z-index: 31;
+    max-height: min(360px, 70vh)
   }
 
   .gold-month-table {
