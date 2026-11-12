@@ -25,14 +25,14 @@ const householdSettingsRef = ref(database, 'households/quanlygiadinh-94ced/setti
 function encodeMergedContributionMonthGroups(groups) {
   return {
     initialized: true,
-    version: 1,
+    version: 2,
     groups: groups.length ? groups : null
   };
 }
 
 function decodeMergedContributionMonthGroups(value) {
   if (value === null) return null;
-  if (value?.initialized === true && value.version === 1) {
+  if (value?.initialized === true && [1, 2].includes(value.version)) {
     return value.groups === null ? [] : value.groups;
   }
   return value;

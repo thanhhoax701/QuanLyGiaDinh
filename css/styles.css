@@ -1470,6 +1470,12 @@ td {
   gap: 7px
 }
 
+@media(min-width:900px) {
+  .gold-section-tools {
+    margin-right: max(0px, calc(100% - var(--gold-contribution-table-width, 100%)))
+  }
+}
+
 .gold-merge-button {
   padding: 6px 9px;
   font-size: 12px;

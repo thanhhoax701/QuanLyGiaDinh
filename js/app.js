@@ -48,7 +48,7 @@ refreshGoldMergeButtons();
 
 function syncMergedContributionMonthGroups(groups, previousGroups) {
   writeMergedContributionMonthGroups(groups).catch(error => {
-    console.error('Không thể đồng bộ nhóm tháng đã gộp:', error);
+    console.error('Không thể đồng bộ nhóm đợt đã gộp:', error);
     if (JSON.stringify(getMergedContributionMonthGroups()) === JSON.stringify(groups)) {
       saveMergedContributionMonthGroups(previousGroups);
       refreshGoldMergeButtons();
@@ -205,26 +205,29 @@ function closeGoldAdjustment() {
 
 function openGoldMergeModal() {
   if (!mergedContributionGroupsCloudReady) {
-    toast('Đang đồng bộ nhóm tháng. Vui lòng thử lại sau giây lát.');
+    toast('Đang đồng bộ nhóm đợt. Vui lòng thử lại sau giây lát.');
     return;
   }
-  const groupedMonths = new Set(getMergedContributionMonthGroups().flat());
-  const months = [...new Set([...$('goldContributionRows').querySelectorAll('tr[data-contribution-month]')]
-    .map(row => row.dataset.contributionMonth)
-    .filter(month => /^\d{4}-(0[1-9]|1[0-2])$/.test(month)))]
-    .sort()
-    .reverse();
+  const groupedTokens = getMergedContributionMonthGroups().flat();
+  const groupedMonths = new Set(groupedTokens.filter(token => /^\d{4}-(0[1-9]|1[0-2])$/.test(token)));
+  const groupedEntryIds = new Set(groupedTokens
+    .filter(token => token.startsWith('entry:'))
+    .map(token => token.slice('entry:'.length)));
+  const rows = [...$('goldContributionRows').querySelectorAll('tr[data-contribution-existing="true"]')];
   const options = $('goldMergeMonthOptions');
   options.replaceChildren();
-  months.forEach(month => {
+  rows.forEach(row => {
+    const { contributionId: id, contributionMonth: month, contributionOrder: order } = row.dataset;
+    if (!id || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
     const label = document.createElement('label');
     const checkbox = document.createElement('input');
     const monthText = document.createElement('span');
+    const token = `entry:${id}`;
     checkbox.type = 'checkbox';
-    checkbox.value = month;
-    checkbox.dataset.mergeMonth = month;
-    checkbox.disabled = groupedMonths.has(month);
-    monthText.textContent = `${month.slice(5, 7)}/${month.slice(0, 4)}`;
+    checkbox.value = token;
+    checkbox.dataset.mergeEntry = token;
+    checkbox.disabled = groupedMonths.has(month) || groupedEntryIds.has(id);
+    monthText.textContent = `${month.slice(5, 7)}/${month.slice(0, 4)} · Đợt ${order || '1'}`;
     label.classList.toggle('is-disabled', checkbox.disabled);
     label.append(checkbox, monthText);
     options.append(label);
@@ -240,7 +243,7 @@ function closeGoldMergeModal() {
 
 function openGoldUngroupModal() {
   if (!mergedContributionGroupsCloudReady) {
-    toast('Đang đồng bộ nhóm tháng. Vui lòng thử lại sau giây lát.');
+    toast('Đang đồng bộ nhóm đợt. Vui lòng thử lại sau giây lát.');
     return;
   }
   const groups = getMergedContributionMonthGroups();
@@ -256,10 +259,17 @@ function openGoldUngroupModal() {
     const groupText = document.createElement('span');
     radio.type = 'radio';
     radio.name = 'goldUngroupGroup';
-    radio.value = group.join('|');
+    radio.value = JSON.stringify(group);
     radio.required = true;
     radio.checked = index === 0;
-    groupText.textContent = group.map(month => `${month.slice(5, 7)}/${month.slice(0, 4)}`).join(' + ');
+    groupText.textContent = group.map(token => {
+      if (/^\d{4}-(0[1-9]|1[0-2])$/.test(token)) return `${token.slice(5, 7)}/${token.slice(0, 4)}`;
+      const id = token.slice('entry:'.length);
+      const contribution = goldContributions.find(item => item.id === id);
+      const month = contribution?.month || id.slice(0, 7);
+      const order = Number(contribution?.order) || 1;
+      return `${month.slice(5, 7)}/${month.slice(0, 4)} · Đợt ${order}`;
+    }).join(' + ');
     label.append(radio, groupText);
     options.append(label);
   });
@@ -354,8 +364,8 @@ function startMergedContributionMonthGroupSync() {
       if (!Array.isArray(remoteGroups) && remoteGroups !== null) {
         mergedContributionGroupsCloudReady = false;
         refreshGoldMergeButtons();
-        console.error('Dữ liệu nhóm tháng trên Firebase không hợp lệ:', remoteGroups);
-        toast('Dữ liệu nhóm tháng trên Firebase không hợp lệ.');
+        console.error('Dữ liệu nhóm đợt trên Firebase không hợp lệ:', remoteGroups);
+        toast('Dữ liệu nhóm đợt trên Firebase không hợp lệ.');
         return;
       }
       saveMergedContributionMonthGroups(remoteGroups || []);
@@ -369,8 +379,8 @@ function startMergedContributionMonthGroupSync() {
     if (!Array.isArray(nextGroups)) {
       mergedContributionGroupsCloudReady = false;
       refreshGoldMergeButtons();
-      console.error('Dữ liệu nhóm tháng trên Firebase không hợp lệ:', remoteGroups);
-      toast('Dữ liệu nhóm tháng trên Firebase không hợp lệ.');
+      console.error('Dữ liệu nhóm đợt trên Firebase không hợp lệ:', remoteGroups);
+      toast('Dữ liệu nhóm đợt trên Firebase không hợp lệ.');
       return;
     }
     const currentGroups = getMergedContributionMonthGroups();
@@ -384,16 +394,16 @@ function startMergedContributionMonthGroupSync() {
     } catch (error) {
       mergedContributionGroupsCloudReady = false;
       refreshGoldMergeButtons();
-      console.error('Không thể áp dụng nhóm tháng từ Firebase:', error);
-      toast(error.message || 'Không thể áp dụng nhóm tháng từ Firebase.');
+      console.error('Không thể áp dụng nhóm đợt từ Firebase:', error);
+      toast(error.message || 'Không thể áp dụng nhóm đợt từ Firebase.');
     }
   }, error => {
     mergedContributionGroupsCloudReady = false;
     refreshGoldMergeButtons();
-    console.error('Không thể đồng bộ nhóm tháng qua Firebase:', error);
+    console.error('Không thể đồng bộ nhóm đợt qua Firebase:', error);
     toast(error.code === 'PERMISSION_DENIED'
-      ? 'Firebase từ chối quyền truy cập nhóm tháng. Kiểm tra Database Rules.'
-      : 'Không thể đồng bộ nhóm tháng. Kiểm tra kết nối rồi thử lại.');
+      ? 'Firebase từ chối quyền truy cập nhóm đợt. Kiểm tra Database Rules.'
+      : 'Không thể đồng bộ nhóm đợt. Kiểm tra kết nối rồi thử lại.');
   });
 }
 
@@ -616,46 +626,47 @@ $('goldUngroupMonths').addEventListener('click', openGoldUngroupModal);
 $('goldMergeForm').addEventListener('submit', event => {
   event.preventDefault();
   if (!mergedContributionGroupsCloudReady) {
-    toast('Đang đồng bộ nhóm tháng. Vui lòng thử lại sau giây lát.');
+    toast('Đang đồng bộ nhóm đợt. Vui lòng thử lại sau giây lát.');
     return;
   }
-  const selectedMonths = [...$('goldMergeMonthOptions').querySelectorAll('[data-merge-month]:checked')]
+  const selectedEntries = [...$('goldMergeMonthOptions').querySelectorAll('[data-merge-entry]:checked')]
     .map(input => input.value);
-  if (selectedMonths.length < 2) {
-    toast('Chọn ít nhất hai tháng để gộp.');
+  if (selectedEntries.length < 2) {
+    toast('Chọn ít nhất hai đợt tích góp để gộp.');
     return;
   }
   try {
     const previousGroups = getMergedContributionMonthGroups();
-    const groups = [...previousGroups, selectedMonths];
+    const groups = [...previousGroups, selectedEntries];
     saveMergedContributionMonthGroups(groups);
+    const savedGroups = getMergedContributionMonthGroups();
     refreshGoldMergeButtons();
     closeGoldMergeModal();
     renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
-    syncMergedContributionMonthGroups(groups, previousGroups);
+    syncMergedContributionMonthGroups(savedGroups, previousGroups);
   } catch (error) {
-    console.error('Không thể gộp các tháng:', error);
-    toast(error.message || 'Không thể gộp các tháng đã chọn.');
+    console.error('Không thể gộp các đợt tích góp:', error);
+    toast(error.message || 'Không thể gộp các đợt đã chọn.');
   }
 });
 
 $('goldUngroupForm').addEventListener('submit', event => {
   event.preventDefault();
   if (!mergedContributionGroupsCloudReady) {
-    toast('Đang đồng bộ nhóm tháng. Vui lòng thử lại sau giây lát.');
+    toast('Đang đồng bộ nhóm đợt. Vui lòng thử lại sau giây lát.');
     return;
   }
   const selectedGroup = $('goldUngroupGroupOptions').querySelector('[name="goldUngroupGroup"]:checked')?.value;
   if (!selectedGroup) {
-    toast('Chọn nhóm tháng cần bỏ gộp.');
+    toast('Chọn nhóm đợt cần bỏ gộp.');
     return;
   }
   const groups = getMergedContributionMonthGroups();
-  const remainingGroups = groups.filter(group => group.join('|') !== selectedGroup);
+  const remainingGroups = groups.filter(group => JSON.stringify(group) !== selectedGroup);
   if (remainingGroups.length === groups.length) {
     closeGoldUngroupModal();
     refreshGoldMergeButtons();
-    toast('Không tìm thấy nhóm tháng cần bỏ gộp.');
+    toast('Không tìm thấy nhóm đợt cần bỏ gộp.');
     return;
   }
   try {
@@ -665,8 +676,8 @@ $('goldUngroupForm').addEventListener('submit', event => {
     renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
     syncMergedContributionMonthGroups(remainingGroups, groups);
   } catch (error) {
-    console.error('Không thể bỏ gộp tháng:', error);
-    toast(error.message || 'Không thể bỏ gộp tháng.');
+    console.error('Không thể bỏ gộp các đợt:', error);
+    toast(error.message || 'Không thể bỏ gộp các đợt.');
   }
 });
 
@@ -738,16 +749,32 @@ $('goldContributionRows').addEventListener('change', event => {
   }
   const { month, contribution: field, contributionId: id, mergedGroup } = input.dataset;
   if (mergedGroup) {
-    const groupMonths = mergedGroup.split('|');
-    if (!groupMonths.length || groupMonths.some(groupMonth => !/^\d{4}-(0[1-9]|1[0-2])$/.test(groupMonth))) return;
+    let groupTokens;
+    try {
+      groupTokens = JSON.parse(mergedGroup);
+    } catch (error) {
+      console.error('Nhóm đợt tích góp không hợp lệ:', error);
+      toast('Không thể cập nhật nhóm đợt không hợp lệ.');
+      return;
+    }
+    if (!Array.isArray(groupTokens) || groupTokens.length < 2) return;
     if (field !== 'purchaseDate' && field !== 'status') return;
-    const groupContributions = groupMonths.flatMap(groupMonth => {
-      const entries = goldContributions.filter(item =>
-        typeof item.id === 'string' &&
-        (item.month || item.id.slice(0, 7)) === groupMonth
-      );
-      return entries.length ? entries : [createGoldContribution(groupMonth)];
-    });
+    const monthGroup = groupTokens.every(groupToken => /^\d{4}-(0[1-9]|1[0-2])$/.test(groupToken));
+    const entryGroup = groupTokens.every(groupToken => groupToken.startsWith('entry:') && groupToken.length > 'entry:'.length);
+    if (!monthGroup && !entryGroup) return;
+    const groupContributions = monthGroup
+      ? groupTokens.flatMap(groupMonth => {
+        const entries = goldContributions.filter(item =>
+          typeof item.id === 'string' &&
+          (item.month || item.id.slice(0, 7)) === groupMonth
+        );
+        return entries.length ? entries : [createGoldContribution(groupMonth)];
+      })
+      : groupTokens.map(groupToken => goldContributions.find(item => item.id === groupToken.slice('entry:'.length)));
+    if (groupContributions.some(contribution => !contribution)) {
+      toast('Một đợt trong nhóm không còn tồn tại. Hãy bỏ gộp rồi tạo nhóm mới.');
+      return;
+    }
     if (field === 'status') {
       if (!['CHƯA MUA', 'ĐÃ GÓP', 'ĐÃ MUA'].includes(input.value)) return;
       if (input.value === 'ĐÃ MUA' && groupContributions.some(item => !item.purchaseDate)) {
