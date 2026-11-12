@@ -253,6 +253,10 @@ function openGoldUngroupModal() {
   }
   const options = $('goldUngroupGroupOptions');
   options.replaceChildren();
+  const renderedRowsById = new Map(
+    [...$('goldContributionRows').querySelectorAll('tr[data-contribution-id]')]
+      .map(row => [row.dataset.contributionId, row])
+  );
   groups.forEach((group, index) => {
     const label = document.createElement('label');
     const radio = document.createElement('input');
@@ -267,7 +271,7 @@ function openGoldUngroupModal() {
       const id = token.slice('entry:'.length);
       const contribution = goldContributions.find(item => item.id === id);
       const month = contribution?.month || id.slice(0, 7);
-      const order = Number(contribution?.order) || 1;
+      const order = Number(renderedRowsById.get(id)?.dataset.contributionOrder) || Number(contribution?.order) || 1;
       return `${month.slice(5, 7)}/${month.slice(0, 4)} · Đợt ${order}`;
     }).join(' + ');
     label.append(radio, groupText);
