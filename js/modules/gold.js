@@ -367,7 +367,7 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
                 ? `<button class="icon-btn delete" type="button" title="Xóa đợt góp" aria-label="Xóa đợt góp tháng ${monthLabel(month)}, đợt ${Number(contribution.order) || 1}" data-delete-contribution="${escapeHTML(id)}"${!contributionsReady ? ' disabled' : ''}>⌫</button>`
                 : '';
             const adjustmentButton = `<button class="icon-btn" type="button" title="Thêm khoản điều chỉnh" aria-label="Thêm khoản điều chỉnh cho ${monthLabel(month)}" data-add-contribution-adjustment="${escapeHTML(id)}"${!contributionsReady ? ' disabled' : ''}>±</button>`;
-            monthRows.push(`<tr data-contribution-month="${month}" data-contribution-order="${Number(contribution.order) || 1}"><td data-column="month">${compactMonthLabel(month)}</td>${amountCells.slice(0, 4).join('')}${cashCell}${amountCells.slice(4).join('')}<td class="gold-contribution-total" data-column="total" data-group-total-placeholder>${money(totalForEntry)}<small>Dư: ${money(cumulativeTotal)}</small></td><td data-column="purchaseDate" data-group-date-placeholder>${dateCell}<small>${movement.purchased ? `Đã mua ${formatQuantity(movement.purchased)}` : ''}${movement.withdrawn ? `Đã lấy ra ${formatQuantity(movement.withdrawn)}` : ''}</small></td><td data-column="status" data-group-status-placeholder>${statusCell}</td><td data-column="actions" data-group-actions-placeholder><div class="actions"><button class="icon-btn" type="button" title="Thêm đợt cùng tháng" aria-label="Thêm đợt cùng tháng ${monthLabel(month)}" data-add-contribution="${month}"${!contributionsReady ? ' disabled' : ''}>＋</button>${adjustmentButton}${deleteButton}<span data-merged-ungroup-placeholder></span></div></td></tr>`);
+            monthRows.push(`<tr data-contribution-month="${month}" data-contribution-order="${Number(contribution.order) || 1}"><td data-column="month">${compactMonthLabel(month)}</td>${amountCells.slice(0, 4).join('')}${cashCell}${amountCells.slice(4).join('')}<td class="gold-contribution-total" data-column="total" data-group-total-placeholder>${money(totalForEntry)}<small>Dư: ${money(cumulativeTotal)}</small></td><td data-column="purchaseDate" data-group-date-placeholder>${dateCell}<small>${movement.purchased ? `Đã mua ${formatQuantity(movement.purchased)}` : ''}${movement.withdrawn ? `Đã lấy ra ${formatQuantity(movement.withdrawn)}` : ''}</small></td><td data-column="status" data-group-status-placeholder>${statusCell}</td><td data-column="actions" data-group-actions-placeholder><div class="actions"><button class="icon-btn" type="button" title="Thêm đợt cùng tháng" aria-label="Thêm đợt cùng tháng ${monthLabel(month)}" data-add-contribution="${month}"${!contributionsReady ? ' disabled' : ''}>＋</button>${adjustmentButton}${deleteButton}</div></td></tr>`);
         });
         contributionMonthRows.set(month, monthRows);
         contributionTotalsByMonth.set(month, monthTotals);
@@ -385,7 +385,6 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
                     .replace(' data-group-date-placeholder', '')
                     .replace(' data-group-status-placeholder', '')
                     .replace(' data-group-actions-placeholder', '')
-                    .replace('<span data-merged-ungroup-placeholder></span>', '')
             ));
             return;
         }
@@ -403,7 +402,6 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
             (contributionMonthRows.get(groupMonth) || []).map(row => ({ month: groupMonth, row }))
         );
         if (!groupRows.length) return;
-        const monthLabels = group.map(compactMonthLabel).join(', ');
         const groupEntries = group.flatMap(groupMonth =>
             contributionsByMonth.get(groupMonth) || [{ ...EMPTY_CONTRIBUTION, id: groupMonth, month: groupMonth }]
         );
@@ -432,17 +430,12 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
             groupMovement.purchased ? `Đã mua ${formatQuantity(groupMovement.purchased)}` : '',
             groupMovement.withdrawn ? `Đã lấy ra ${formatQuantity(groupMovement.withdrawn)}` : ''
         ].filter(Boolean).join(' · ');
-        const mergedDateCell = `<td data-column="purchaseDate" rowspan="${groupRows.length}">${formatMergedDateInput(sharedDate, group, !contributionsReady)}${mixedDate ? '<small class="gold-merged-value-note">Ngày mua khác nhau</small>' : ''}${movementNotes ? `<small>${movementNotes}</small>` : ''}</td>`;
-        const mergedStatusCell = `<td data-column="status" rowspan="${groupRows.length}">${formatMergedStatusSelect(sharedStatus, group, !contributionsReady, mixedStatus)}</td>`;
-        const ungroupButton = `<button class="icon-btn gold-inline-ungroup" type="button" title="Bỏ gộp tháng" aria-label="Bỏ gộp các tháng ${escapeHTML(monthLabels)}" data-ungroup-months="${escapeHTML(group.join('|'))}">−</button>`;
+        const mergedDateCell = `<td class="gold-merged-shared-cell" data-column="purchaseDate" rowspan="${groupRows.length}">${formatMergedDateInput(sharedDate, group, !contributionsReady)}${mixedDate ? '<small class="gold-merged-value-note">Ngày mua khác nhau</small>' : ''}${movementNotes ? `<small>${movementNotes}</small>` : ''}</td>`;
+        const mergedStatusCell = `<td class="gold-merged-shared-cell" data-column="status" rowspan="${groupRows.length}">${formatMergedStatusSelect(sharedStatus, group, !contributionsReady, mixedStatus)}</td>`;
         const mergedActions = groupRows.map(({ month: groupMonth, row }, index) => {
             const actionContent = row.match(/<td data-column="actions" data-group-actions-placeholder>([\s\S]*?)<\/td>/)?.[1] || '';
             const order = row.match(/data-contribution-order="(\d+)"/)?.[1] || '1';
-            const actions = actionContent.replace(
-                '<span data-merged-ungroup-placeholder></span>',
-                index === 0 ? ungroupButton : ''
-            );
-            return `<div class="gold-merged-action-item"><small>${compactMonthLabel(groupMonth)} · Đợt ${order}</small>${actions}</div>`;
+            return `<div class="gold-merged-action-item" title="${escapeHTML(`${compactMonthLabel(groupMonth)} · Đợt ${order}`)}">${actionContent}</div>`;
         }).join('');
         const mergedActionsCell = `<td data-column="actions" class="gold-merged-actions-cell" rowspan="${groupRows.length}"><div class="gold-merged-actions">${mergedActions}</div></td>`;
         groupRows.forEach(({ row }, index) => {

@@ -28,6 +28,12 @@ function render() {
   renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
 }
 
+function refreshGoldUngroupButton() {
+  $('goldUngroupMonths').disabled = getMergedContributionMonthGroups().length === 0;
+}
+
+refreshGoldUngroupButton();
+
 function toast(message) {
   $('toast').textContent = message;
   $('toast').classList.add('show');
@@ -201,6 +207,36 @@ function closeGoldMergeModal() {
   $('goldMergeBackdrop').classList.remove('show');
   $('goldMergeForm').reset();
   $('goldMergeMonthOptions').replaceChildren();
+}
+
+function openGoldUngroupModal() {
+  const groups = getMergedContributionMonthGroups();
+  if (!groups.length) {
+    refreshGoldUngroupButton();
+    return;
+  }
+  const options = $('goldUngroupGroupOptions');
+  options.replaceChildren();
+  groups.forEach((group, index) => {
+    const label = document.createElement('label');
+    const radio = document.createElement('input');
+    const groupText = document.createElement('span');
+    radio.type = 'radio';
+    radio.name = 'goldUngroupGroup';
+    radio.value = group.join('|');
+    radio.required = true;
+    radio.checked = index === 0;
+    groupText.textContent = group.map(month => `${month.slice(5, 7)}/${month.slice(0, 4)}`).join(' + ');
+    label.append(radio, groupText);
+    options.append(label);
+  });
+  $('goldUngroupBackdrop').classList.add('show');
+}
+
+function closeGoldUngroupModal() {
+  $('goldUngroupBackdrop').classList.remove('show');
+  $('goldUngroupForm').reset();
+  $('goldUngroupGroupOptions').replaceChildren();
 }
 
 function deleteTransaction(id) {
@@ -430,19 +466,6 @@ document.addEventListener('click', event => {
 });
 
 $('goldContributionRows').addEventListener('click', event => {
-  const ungroup = event.target.closest('[data-ungroup-months]');
-  if (ungroup) {
-    const groupId = ungroup.dataset.ungroupMonths;
-    const groups = getMergedContributionMonthGroups().filter(group => group.join('|') !== groupId);
-    try {
-      saveMergedContributionMonthGroups(groups);
-      renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
-    } catch (error) {
-      console.error('Không thể bỏ gộp tháng:', error);
-      toast(error.message || 'Không thể bỏ gộp tháng.');
-    }
-    return;
-  }
   const add = event.target.closest('[data-add-contribution]');
   const remove = event.target.closest('[data-delete-contribution]');
   const adjust = event.target.closest('[data-add-contribution-adjustment]');
@@ -480,6 +503,7 @@ $('goldContributionRows').addEventListener('click', event => {
 });
 
 $('goldMergeMonths').addEventListener('click', openGoldMergeModal);
+$('goldUngroupMonths').addEventListener('click', openGoldUngroupModal);
 $('goldMergeForm').addEventListener('submit', event => {
   event.preventDefault();
   const selectedMonths = [...$('goldMergeMonthOptions').querySelectorAll('[data-merge-month]:checked')]
@@ -490,11 +514,38 @@ $('goldMergeForm').addEventListener('submit', event => {
   }
   try {
     saveMergedContributionMonthGroups([...getMergedContributionMonthGroups(), selectedMonths]);
+    refreshGoldUngroupButton();
     closeGoldMergeModal();
     renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
   } catch (error) {
     console.error('Không thể gộp các tháng:', error);
     toast(error.message || 'Không thể gộp các tháng đã chọn.');
+  }
+});
+
+$('goldUngroupForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const selectedGroup = $('goldUngroupGroupOptions').querySelector('[name="goldUngroupGroup"]:checked')?.value;
+  if (!selectedGroup) {
+    toast('Chọn nhóm tháng cần bỏ gộp.');
+    return;
+  }
+  const groups = getMergedContributionMonthGroups();
+  const remainingGroups = groups.filter(group => group.join('|') !== selectedGroup);
+  if (remainingGroups.length === groups.length) {
+    closeGoldUngroupModal();
+    refreshGoldUngroupButton();
+    toast('Không tìm thấy nhóm tháng cần bỏ gộp.');
+    return;
+  }
+  try {
+    saveMergedContributionMonthGroups(remainingGroups);
+    refreshGoldUngroupButton();
+    closeGoldUngroupModal();
+    renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+  } catch (error) {
+    console.error('Không thể bỏ gộp tháng:', error);
+    toast(error.message || 'Không thể bỏ gộp tháng.');
   }
 });
 
@@ -1009,6 +1060,11 @@ $('closeGoldMergeModal').addEventListener('click', closeGoldMergeModal);
 $('goldMergeBackdrop').addEventListener('click', event => {
   if (event.target === $('goldMergeBackdrop')) closeGoldMergeModal();
 });
+$('cancelGoldUngroup').addEventListener('click', closeGoldUngroupModal);
+$('closeGoldUngroupModal').addEventListener('click', closeGoldUngroupModal);
+$('goldUngroupBackdrop').addEventListener('click', event => {
+  if (event.target === $('goldUngroupBackdrop')) closeGoldUngroupModal();
+});
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && $('goldTransactionBackdrop').classList.contains('show')) {
     resetGoldPurchaseForm();
@@ -1018,6 +1074,9 @@ document.addEventListener('keydown', event => {
   }
   if (event.key === 'Escape' && $('goldMergeBackdrop').classList.contains('show')) {
     closeGoldMergeModal();
+  }
+  if (event.key === 'Escape' && $('goldUngroupBackdrop').classList.contains('show')) {
+    closeGoldUngroupModal();
   }
 });
 

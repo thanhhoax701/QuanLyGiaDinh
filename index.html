@@ -216,6 +216,7 @@
                 </div>
                 <div class="gold-section-tools">
                   <button class="btn secondary gold-merge-button" id="goldMergeMonths" type="button">Gộp tháng</button>
+                  <button class="btn secondary gold-merge-button" id="goldUngroupMonths" type="button" disabled>Bỏ gộp</button>
                   <details class="gold-column-picker" id="goldContributionColumnPicker">
                     <summary>Cột hiển thị</summary>
                     <div class="gold-column-picker-options">
@@ -539,11 +540,26 @@
           <button class="close" id="closeGoldMergeModal" type="button" aria-label="Đóng">✕</button>
         </div>
         <form id="goldMergeForm">
-          <p class="eyebrow">Chọn ít nhất hai tháng. Các dòng tháng vẫn hiển thị riêng; cột Tổng tiền, Ngày mua, Trạng thái và Thao tác được gộp. Chỉnh Ngày mua hoặc Trạng thái trong nhóm sẽ áp dụng cho mọi tháng. Tháng thuộc nhóm khác cần bỏ gộp trước khi chọn lại.</p>
           <div class="gold-merge-month-options" id="goldMergeMonthOptions" role="group" aria-label="Chọn tháng cần gộp"></div>
           <div class="modal-actions">
             <button class="btn secondary" id="cancelGoldMerge" type="button">Hủy</button>
             <button class="btn" type="submit">Gộp các tháng đã chọn</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="modal-backdrop" id="goldUngroupBackdrop">
+      <div class="modal gold-merge-modal" role="dialog" aria-modal="true" aria-labelledby="goldUngroupTitle">
+        <div class="modal-head">
+          <h2 id="goldUngroupTitle">Bỏ gộp tháng</h2>
+          <button class="close" id="closeGoldUngroupModal" type="button" aria-label="Đóng">✕</button>
+        </div>
+        <form id="goldUngroupForm">
+          <p class="eyebrow">Chọn nhóm tháng muốn bỏ gộp. Dữ liệu từng tháng vẫn được giữ nguyên.</p>
+          <div class="gold-merge-month-options" id="goldUngroupGroupOptions" role="radiogroup" aria-label="Chọn nhóm cần bỏ gộp"></div>
+          <div class="modal-actions">
+            <button class="btn secondary" id="cancelGoldUngroup" type="button">Hủy</button>
+            <button class="btn" type="submit">Bỏ gộp nhóm đã chọn</button>
           </div>
         </form>
       </div>

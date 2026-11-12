@@ -1476,6 +1476,11 @@ td {
   white-space: nowrap
 }
 
+.gold-merge-button:disabled {
+  opacity: .5;
+  cursor: not-allowed
+}
+
 .gold-column-picker {
   position: relative;
   flex: 0 0 auto
@@ -1729,21 +1734,20 @@ td {
   grid-column: 1 / -1
 }
 
-.gold-contribution-table .gold-merged-total-cell {
-  background: #f3f7ff;
-  text-align: center;
+.gold-contribution-table .gold-merged-total-cell,
+.gold-contribution-table .gold-merged-shared-cell,
+.gold-contribution-table .gold-merged-actions-cell {
+  background: #f5f8ff;
   vertical-align: middle
 }
 
-.gold-contribution-table .gold-inline-ungroup {
-  min-width: 16px;
-  padding: 2px;
-  font-size: 10px;
-  line-height: 1
+.gold-contribution-table .gold-merged-total-cell {
+  text-align: center
 }
 
 .gold-contribution-table .gold-merged-actions-cell {
-  vertical-align: middle
+  vertical-align: top !important;
+  padding: 0 !important
 }
 
 .gold-contribution-table .gold-merged-actions {
@@ -1754,10 +1758,10 @@ td {
 
 .gold-contribution-table .gold-merged-action-item {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 2px;
-  padding: 2px 0;
+  justify-content: center;
+  min-height: 54px;
+  padding: 2px;
   border-bottom: 1px solid #e6ebf2
 }
 
@@ -1765,7 +1769,6 @@ td {
   border-bottom: 0
 }
 
-.gold-contribution-table .gold-merged-action-item > small,
 .gold-contribution-table .gold-merged-value-note {
   color: var(--muted);
   font-size: 9px;
@@ -1796,8 +1799,10 @@ td {
   .gold-contribution-status {
     width: 100%;
     min-width: 0;
+    height: 32px;
     padding: 5px 3px;
-    font-size: 11px
+    font-size: 11px;
+    box-sizing: border-box
   }
 
   .gold-contribution-table th {
@@ -1816,6 +1821,10 @@ td {
   .gold-contribution-table .actions {
     gap: 2px;
     flex-wrap: nowrap
+  }
+
+  .gold-contribution-table .gold-merged-action-item {
+    min-height: 42px
   }
 
   .gold-contribution-table .icon-btn {
