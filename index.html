@@ -212,37 +212,93 @@
               <div class="panel-title top-gap gold-section-header">
                 <div>
                   <h2><button class="gold-section-toggle" type="button" data-gold-section-toggle aria-expanded="false">Danh sách tích góp<span class="gold-section-chevron" aria-hidden="true"></span></button></h2>
-                  <p>Mỗi đợt góp là một dòng; có thể thêm nhiều đợt trong cùng tháng. Tiền tự tính bằng tổng KPI và lương của cả hai; tổng đợt = Tiền + Quỹ + Heo + Bù - Nợ.</p>
+                  <p>Tiền được tính bằng tổng KPI và Lương của cả hai; tổng đợt = Tiền + Quỹ + Heo + Bù - Nợ ± các điều chỉnh.</p>
+                </div>
+                <div class="gold-section-tools">
+                  <button class="btn secondary gold-merge-button" id="goldMergeMonths" type="button">Gộp tháng</button>
+                  <details class="gold-column-picker" id="goldContributionColumnPicker">
+                    <summary>Cột hiển thị</summary>
+                    <div class="gold-column-picker-options">
+                      <p class="gold-column-picker-note">Tháng và Thao tác luôn hiển thị.</p>
+                      <label><input type="checkbox" data-contribution-column-toggle="thanhHoaKpi" checked /> Thanh Hòa · KPI</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="thanhHoaSalary" checked /> Thanh Hòa · Lương</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="ngocYenKpi" checked /> Ngọc Yến · KPI</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="ngocYenSalary" checked /> Ngọc Yến · Lương</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="cash" checked /> Tiền</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="fund" checked /> Quỹ</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="pig" checked /> Heo</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="extra" checked /> Bù</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="debt" checked /> Nợ</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="total" checked /> Tổng tiền</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="purchaseDate" checked /> Ngày mua</label>
+                      <label><input type="checkbox" data-contribution-column-toggle="status" checked /> Trạng thái</label>
+                    </div>
+                  </details>
                 </div>
               </div>
               <div class="gold-section-content">
                 <div class="table-wrap">
-                  <table class="gold-contribution-table">
+                  <table class="gold-contribution-table" id="goldContributionTable">
+                    <colgroup>
+                      <col data-column="month" />
+                      <col data-column="thanhHoaKpi" />
+                      <col data-column="thanhHoaSalary" />
+                      <col data-column="ngocYenKpi" />
+                      <col data-column="ngocYenSalary" />
+                      <col data-column="cash" />
+                      <col data-column="fund" />
+                      <col data-column="pig" />
+                      <col data-column="extra" />
+                      <col data-column="debt" />
+                      <col data-column="total" />
+                      <col data-column="purchaseDate" />
+                      <col data-column="status" />
+                      <col data-column="actions" />
+                    </colgroup>
                     <thead>
                       <tr>
-                        <th rowspan="2">Đợt</th>
-                        <th rowspan="2">Tháng</th>
-                        <th colspan="2">Thanh Hòa</th>
-                        <th colspan="2">Ngọc Yến</th>
-                        <th rowspan="2">Tiền</th>
-                        <th rowspan="2">Quỹ</th>
-                        <th rowspan="2">Heo</th>
-                        <th rowspan="2">Bù</th>
-                        <th rowspan="2">Nợ</th>
-                        <th rowspan="2">Tổng tiền</th>
-                        <th rowspan="2">Ngày mua</th>
-                        <th rowspan="2">Trạng thái</th>
-                        <th rowspan="2">Thao tác</th>
+                        <th rowspan="2" data-column="month">Tháng</th>
+                        <th colspan="2" data-column-group="thanhHoa">Thanh Hòa</th>
+                        <th colspan="2" data-column-group="ngocYen">Ngọc Yến</th>
+                        <th rowspan="2" data-column="cash">Tiền</th>
+                        <th rowspan="2" data-column="fund">Quỹ</th>
+                        <th rowspan="2" data-column="pig">Heo</th>
+                        <th rowspan="2" data-column="extra">Bù</th>
+                        <th rowspan="2" data-column="debt">Nợ</th>
+                        <th rowspan="2" data-column="total">Tổng tiền</th>
+                        <th rowspan="2" data-column="purchaseDate">Ngày mua</th>
+                        <th rowspan="2" data-column="status">Trạng thái</th>
+                        <th rowspan="2" data-column="actions">Thao tác</th>
                       </tr>
                       <tr>
-                        <th>KPI</th>
-                        <th>Lương</th>
-                        <th>KPI</th>
-                        <th>Lương</th>
+                        <th data-column="thanhHoaKpi">KPI</th>
+                        <th data-column="thanhHoaSalary">Lương</th>
+                        <th data-column="ngocYenKpi">KPI</th>
+                        <th data-column="ngocYenSalary">Lương</th>
                       </tr>
                     </thead>
                     <tbody id="goldContributionRows"></tbody>
                   </table>
+                </div>
+                <div class="gold-adjustment-history">
+                  <div class="panel-title top-gap">
+                    <h3>Lịch sử điều chỉnh</h3>
+                  </div>
+                  <div class="table-wrap">
+                    <table class="gold-adjustment-table">
+                      <thead>
+                        <tr>
+                          <th>Ngày</th>
+                          <th>Đợt góp</th>
+                          <th>Loại</th>
+                          <th>Ghi chú</th>
+                          <th>Số tiền</th>
+                          <th>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody id="goldContributionAdjustmentRows"></tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             </section>
@@ -437,6 +493,57 @@
           <div class="modal-actions">
             <button class="btn secondary" id="goldPurchaseCancelEdit" type="button">Hủy</button>
             <button class="btn" id="goldPurchaseSubmit" type="submit" disabled>Lưu giao dịch</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="modal-backdrop" id="goldAdjustmentBackdrop">
+      <div class="modal gold-adjustment-modal" role="dialog" aria-modal="true" aria-labelledby="goldAdjustmentTitle">
+        <div class="modal-head">
+          <h2 id="goldAdjustmentTitle">Thêm điều chỉnh</h2>
+          <button class="close" id="closeGoldAdjustmentModal" type="button" aria-label="Đóng">✕</button>
+        </div>
+        <form class="gold-adjustment-form" id="goldAdjustmentForm">
+          <input type="hidden" id="goldAdjustmentContributionId" />
+          <input type="hidden" id="goldAdjustmentId" />
+          <div class="field">
+            <label for="goldAdjustmentType">Loại điều chỉnh *</label>
+            <select id="goldAdjustmentType" required>
+              <option value="subtract">Trừ vào tổng</option>
+              <option value="add">Cộng vào tổng</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="goldAdjustmentDate">Ngày *</label>
+            <input id="goldAdjustmentDate" type="date" required />
+          </div>
+          <div class="field">
+            <label for="goldAdjustmentAmount">Số tiền (VNĐ) *</label>
+            <input id="goldAdjustmentAmount" type="number" min="1" step="1" required />
+          </div>
+          <div class="field span-2">
+            <label for="goldAdjustmentNote">Ghi chú *</label>
+            <input id="goldAdjustmentNote" maxlength="200" required placeholder="Ví dụ: Đã lấy ra sử dụng" />
+          </div>
+          <div class="modal-actions span-2">
+            <button class="btn secondary" id="cancelGoldAdjustment" type="button">Hủy</button>
+            <button class="btn" type="submit">Lưu điều chỉnh</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="modal-backdrop" id="goldMergeBackdrop">
+      <div class="modal gold-merge-modal" role="dialog" aria-modal="true" aria-labelledby="goldMergeTitle">
+        <div class="modal-head">
+          <h2 id="goldMergeTitle">Gộp tháng</h2>
+          <button class="close" id="closeGoldMergeModal" type="button" aria-label="Đóng">✕</button>
+        </div>
+        <form id="goldMergeForm">
+          <p class="eyebrow">Chọn ít nhất hai tháng. Các dòng tháng vẫn hiển thị riêng; cột Tổng tiền, Ngày mua, Trạng thái và Thao tác được gộp. Chỉnh Ngày mua hoặc Trạng thái trong nhóm sẽ áp dụng cho mọi tháng. Tháng thuộc nhóm khác cần bỏ gộp trước khi chọn lại.</p>
+          <div class="gold-merge-month-options" id="goldMergeMonthOptions" role="group" aria-label="Chọn tháng cần gộp"></div>
+          <div class="modal-actions">
+            <button class="btn secondary" id="cancelGoldMerge" type="button">Hủy</button>
+            <button class="btn" type="submit">Gộp các tháng đã chọn</button>
           </div>
         </form>
       </div>

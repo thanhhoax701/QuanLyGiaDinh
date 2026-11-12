@@ -2,7 +2,7 @@ import { $, currentMonth, dateKey, loadTransactions, saveTransactions, loadGoldP
 import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions, observeGoldPurchases, writeGoldPurchases, observeGoldContributions, writeGoldContributions, writeGoldContribution, removeGoldContribution } from './modules/firebase.js';
 import { getDailyLimitDebtBalance, renderReports } from './modules/reports.js';
 import { getFilteredTransactions } from './modules/transactions.js';
-import { renderGoldFund } from './modules/gold.js';
+import { getMergedContributionMonthGroups, getVisibleContributionColumns, renderGoldFund, saveMergedContributionMonthGroups, saveVisibleContributionColumns } from './modules/gold.js';
 import { openModal, closeModal, fillCategories } from './modules/modal.js';
 import { initNavigation } from './modules/navigation.js';
 import { exportMonthlyReport, readTransactionsFile } from './modules/excel.js';
@@ -17,6 +17,11 @@ let stopTransactionListener;
 let stopGoldPurchaseListener;
 let stopGoldContributionListener;
 let editingGoldPurchaseId = null;
+const goldContributionColumnPicker = $('goldContributionColumnPicker');
+const visibleContributionColumns = getVisibleContributionColumns();
+goldContributionColumnPicker.querySelectorAll('[data-contribution-column-toggle]').forEach(input => {
+  input.checked = visibleContributionColumns.has(input.dataset.contributionColumnToggle);
+});
 
 function render() {
   renderReports(transactions);
@@ -93,24 +98,109 @@ async function persistGoldPurchases(message) {
   }
 }
 
-async function persistGoldContribution(contribution) {
+function createGoldContribution(month, id = month, order = 1) {
+  return {
+    id,
+    month,
+    order,
+    thanhHoaKpi: 0,
+    thanhHoaSalary: 0,
+    thanhHoaTarget: 0,
+    ngocYenKpi: 0,
+    ngocYenSalary: 0,
+    ngocYenTarget: 0,
+    cash: 0,
+    fund: 0,
+    pig: 0,
+    extra: 0,
+    debt: 0,
+    purchaseDate: '',
+    status: 'CHƯA MUA'
+  };
+}
+
+async function persistGoldContributions(contributions) {
   saveGoldContributions(goldContributions);
   renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
   if (!goldContributionsCloudReady) {
     toast('Firebase chưa sẵn sàng; khoản tích góp chỉ được lưu trên thiết bị này.');
     return;
   }
-  try {
-    await writeGoldContribution(contribution);
-  } catch (error) {
-    console.error('Không thể lưu khoản tích góp lên Firebase:', error);
-    if (error.code === 'PERMISSION_DENIED') {
-      toast('Firebase từ chối quyền ghi (PERMISSION_DENIED). Hãy publish Database Rules cho nhánh households/quanlygiadinh-94ced.');
-      return;
+  for (const contribution of contributions) {
+    try {
+      await writeGoldContribution(contribution);
+    } catch (error) {
+      console.error('Không thể lưu khoản tích góp lên Firebase:', error);
+      if (error.code === 'PERMISSION_DENIED') {
+        toast('Firebase từ chối quyền ghi (PERMISSION_DENIED). Hãy publish Database Rules cho nhánh households/quanlygiadinh-94ced.');
+        continue;
+      }
+      const reason = error.code || error.message || 'không rõ nguyên nhân';
+      toast(`Lưu Firebase thất bại (${reason}). Dữ liệu vẫn còn trên thiết bị này.`);
     }
-    const reason = error.code || error.message || 'không rõ nguyên nhân';
-    toast(`Lưu Firebase thất bại (${reason}). Dữ liệu vẫn còn trên thiết bị này.`);
   }
+}
+
+async function persistGoldContribution(contribution) {
+  await persistGoldContributions([contribution]);
+}
+
+function openGoldAdjustment(contributionId, adjustmentId = '') {
+  const contribution = goldContributions.find(item => item.id === contributionId);
+  const adjustments = Array.isArray(contribution?.adjustments) ? contribution.adjustments : [];
+  const adjustment = adjustments.find(item => item.id === adjustmentId);
+  if (adjustmentId && !adjustment) {
+    toast('Không tìm thấy khoản điều chỉnh cần sửa.');
+    return;
+  }
+  const today = dateKey(new Date());
+  $('goldAdjustmentForm').reset();
+  $('goldAdjustmentContributionId').value = contributionId;
+  $('goldAdjustmentId').value = adjustmentId;
+  $('goldAdjustmentTitle').textContent = adjustment ? 'Sửa điều chỉnh' : 'Thêm điều chỉnh';
+  $('goldAdjustmentType').value = adjustment?.type || 'subtract';
+  $('goldAdjustmentAmount').value = adjustment?.amount || '';
+  $('goldAdjustmentDate').value = adjustment?.date || today;
+  $('goldAdjustmentDate').max = today;
+  $('goldAdjustmentNote').value = adjustment?.note || '';
+  $('goldAdjustmentBackdrop').classList.add('show');
+  $('goldAdjustmentAmount').focus();
+}
+
+function closeGoldAdjustment() {
+  $('goldAdjustmentBackdrop').classList.remove('show');
+  $('goldAdjustmentForm').reset();
+}
+
+function openGoldMergeModal() {
+  const groupedMonths = new Set(getMergedContributionMonthGroups().flat());
+  const months = [...new Set([...$('goldContributionRows').querySelectorAll('tr[data-contribution-month]')]
+    .map(row => row.dataset.contributionMonth)
+    .filter(month => /^\d{4}-(0[1-9]|1[0-2])$/.test(month)))]
+    .sort()
+    .reverse();
+  const options = $('goldMergeMonthOptions');
+  options.replaceChildren();
+  months.forEach(month => {
+    const label = document.createElement('label');
+    const checkbox = document.createElement('input');
+    const monthText = document.createElement('span');
+    checkbox.type = 'checkbox';
+    checkbox.value = month;
+    checkbox.dataset.mergeMonth = month;
+    checkbox.disabled = groupedMonths.has(month);
+    monthText.textContent = `${month.slice(5, 7)}/${month.slice(0, 4)}`;
+    label.classList.toggle('is-disabled', checkbox.disabled);
+    label.append(checkbox, monthText);
+    options.append(label);
+  });
+  $('goldMergeBackdrop').classList.add('show');
+}
+
+function closeGoldMergeModal() {
+  $('goldMergeBackdrop').classList.remove('show');
+  $('goldMergeForm').reset();
+  $('goldMergeMonthOptions').replaceChildren();
 }
 
 function deleteTransaction(id) {
@@ -340,11 +430,29 @@ document.addEventListener('click', event => {
 });
 
 $('goldContributionRows').addEventListener('click', event => {
+  const ungroup = event.target.closest('[data-ungroup-months]');
+  if (ungroup) {
+    const groupId = ungroup.dataset.ungroupMonths;
+    const groups = getMergedContributionMonthGroups().filter(group => group.join('|') !== groupId);
+    try {
+      saveMergedContributionMonthGroups(groups);
+      renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+    } catch (error) {
+      console.error('Không thể bỏ gộp tháng:', error);
+      toast(error.message || 'Không thể bỏ gộp tháng.');
+    }
+    return;
+  }
   const add = event.target.closest('[data-add-contribution]');
   const remove = event.target.closest('[data-delete-contribution]');
-  if (!add && !remove) return;
+  const adjust = event.target.closest('[data-add-contribution-adjustment]');
+  if (!add && !remove && !adjust) return;
   if (!goldContributionsCloudReady) {
     toast('Đang tải danh sách tích góp. Vui lòng thử lại sau.');
+    return;
+  }
+  if (adjust) {
+    openGoldAdjustment(adjust.dataset.addContributionAdjustment);
     return;
   }
   if (add) {
@@ -352,24 +460,8 @@ $('goldContributionRows').addEventListener('click', event => {
     if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
     const entries = goldContributions.filter(item => (item.month || item.id.slice(0, 7)) === month);
     const nextOrder = entries.reduce((max, item) => Math.max(max, Number(item.order) || 0), 0) + 1;
-    const contribution = {
-      id: `${month}-${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`}`,
-      month,
-      order: nextOrder,
-      thanhHoaKpi: 0,
-      thanhHoaSalary: 0,
-      thanhHoaTarget: 0,
-      ngocYenKpi: 0,
-      ngocYenSalary: 0,
-      ngocYenTarget: 0,
-      cash: 0,
-      fund: 0,
-      pig: 0,
-      extra: 0,
-      debt: 0,
-      purchaseDate: '',
-      status: 'CHƯA MUA'
-    };
+    const id = `${month}-${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+    const contribution = createGoldContribution(month, id, nextOrder);
     goldContributions = [...goldContributions, contribution];
     void persistGoldContribution(contribution);
     return;
@@ -387,6 +479,69 @@ $('goldContributionRows').addEventListener('click', event => {
   });
 });
 
+$('goldMergeMonths').addEventListener('click', openGoldMergeModal);
+$('goldMergeForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const selectedMonths = [...$('goldMergeMonthOptions').querySelectorAll('[data-merge-month]:checked')]
+    .map(input => input.value);
+  if (selectedMonths.length < 2) {
+    toast('Chọn ít nhất hai tháng để gộp.');
+    return;
+  }
+  try {
+    saveMergedContributionMonthGroups([...getMergedContributionMonthGroups(), selectedMonths]);
+    closeGoldMergeModal();
+    renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+  } catch (error) {
+    console.error('Không thể gộp các tháng:', error);
+    toast(error.message || 'Không thể gộp các tháng đã chọn.');
+  }
+});
+
+$('goldContributionAdjustmentRows').addEventListener('click', event => {
+  const edit = event.target.closest('[data-edit-contribution-adjustment]');
+  const remove = event.target.closest('[data-delete-contribution-adjustment]');
+  if (!edit && !remove) return;
+  if (!goldContributionsCloudReady) {
+    toast('Đang tải danh sách tích góp. Vui lòng thử lại sau.');
+    return;
+  }
+  const button = edit || remove;
+  const contributionId = edit ? edit.dataset.editContributionAdjustment : remove.dataset.deleteContributionAdjustment;
+  const contribution = goldContributions.find(item => item.id === contributionId);
+  const adjustmentId = button.dataset.adjustmentId;
+  const adjustments = Array.isArray(contribution?.adjustments) ? contribution.adjustments : [];
+  const adjustment = adjustments.find(item => item.id === adjustmentId);
+  if (!contribution || !adjustment) return;
+  if (edit) {
+    openGoldAdjustment(contribution.id, adjustmentId);
+    return;
+  }
+  const action = adjustment.type === 'subtract' ? 'trừ' : 'cộng';
+  if (!confirm(`Xóa khoản ${action} ${new Intl.NumberFormat('vi-VN').format(adjustment.amount)} ₫ khỏi đợt tích góp?`)) return;
+  const updatedContribution = {
+    ...contribution,
+    adjustments: contribution.adjustments.filter(item => item.id !== adjustmentId)
+  };
+  goldContributions = goldContributions.map(item => item.id === contribution.id ? updatedContribution : item);
+  void persistGoldContribution(updatedContribution);
+});
+
+goldContributionColumnPicker.addEventListener('change', event => {
+  const input = event.target.closest('[data-contribution-column-toggle]');
+  if (!input) return;
+  const selectedColumns = [...goldContributionColumnPicker.querySelectorAll('[data-contribution-column-toggle]:checked')]
+    .map(checkbox => checkbox.dataset.contributionColumnToggle);
+  try {
+    saveVisibleContributionColumns(selectedColumns);
+    renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+  } catch (error) {
+    console.error('Không thể lưu tùy chọn cột tích góp:', error);
+    input.checked = !input.checked;
+    toast('Không thể lưu tùy chọn cột. Vui lòng kiểm tra bộ nhớ trình duyệt.');
+  }
+});
+
 $('goldContributionRows').addEventListener('change', event => {
   const input = event.target.closest('[data-contribution]');
   if (!input) return;
@@ -395,7 +550,48 @@ $('goldContributionRows').addEventListener('change', event => {
     renderGoldFund(goldPurchases, goldContributions, false);
     return;
   }
-  const { month, contribution: field, contributionId: id } = input.dataset;
+  const { month, contribution: field, contributionId: id, mergedGroup } = input.dataset;
+  if (mergedGroup) {
+    const groupMonths = mergedGroup.split('|');
+    if (!groupMonths.length || groupMonths.some(groupMonth => !/^\d{4}-(0[1-9]|1[0-2])$/.test(groupMonth))) return;
+    if (field !== 'purchaseDate' && field !== 'status') return;
+    const groupContributions = groupMonths.flatMap(groupMonth => {
+      const entries = goldContributions.filter(item =>
+        typeof item.id === 'string' &&
+        (item.month || item.id.slice(0, 7)) === groupMonth
+      );
+      return entries.length ? entries : [createGoldContribution(groupMonth)];
+    });
+    if (field === 'status') {
+      if (!['CHƯA MUA', 'ĐÃ GÓP', 'ĐÃ MUA'].includes(input.value)) return;
+      if (input.value === 'ĐÃ MUA' && groupContributions.some(item => !item.purchaseDate)) {
+        toast('Nhập ngày mua trước khi chọn trạng thái ĐÃ MUA.');
+        renderGoldFund(goldPurchases, goldContributions, true);
+        return;
+      }
+    } else {
+      if (input.value && input.value > dateKey(new Date())) {
+        toast('Ngày mua không thể ở tương lai.');
+        renderGoldFund(goldPurchases, goldContributions, true);
+        return;
+      }
+      if (!input.value && groupContributions.some(item => item.status === 'ĐÃ MUA')) {
+        toast('Đổi trạng thái khỏi ĐÃ MUA trước khi xóa ngày mua.');
+        renderGoldFund(goldPurchases, goldContributions, true);
+        return;
+      }
+    }
+
+    const updatedContributions = groupContributions.map(item => ({ ...item, [field]: input.value }));
+    const existingIds = new Set(goldContributions.map(item => item.id));
+    const updatesById = new Map(updatedContributions.map(item => [item.id, item]));
+    goldContributions = [
+      ...goldContributions.map(item => updatesById.get(item.id) || item),
+      ...updatedContributions.filter(item => !existingIds.has(item.id))
+    ];
+    void persistGoldContributions(updatedContributions);
+    return;
+  }
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return;
   const amountFields = [
     'thanhHoaKpi', 'thanhHoaSalary',
@@ -404,26 +600,7 @@ $('goldContributionRows').addEventListener('change', event => {
   ];
   if (!amountFields.includes(field) && field !== 'purchaseDate' && field !== 'status') return;
   const current = goldContributions.find(item => item.id === id);
-  const contribution = current
-    ? { ...current }
-    : {
-      id,
-      month,
-      order: 1,
-      thanhHoaKpi: 0,
-      thanhHoaSalary: 0,
-      thanhHoaTarget: 0,
-      ngocYenKpi: 0,
-      ngocYenSalary: 0,
-      ngocYenTarget: 0,
-      cash: 0,
-      fund: 0,
-      pig: 0,
-      extra: 0,
-      debt: 0,
-      purchaseDate: '',
-      status: 'CHƯA MUA'
-    };
+  const contribution = current ? { ...current } : createGoldContribution(month, id);
 
   if (field === 'status') {
     if (!['CHƯA MUA', 'ĐÃ GÓP', 'ĐÃ MUA'].includes(input.value)) return;
@@ -464,6 +641,87 @@ $('goldContributionRows').addEventListener('change', event => {
   } else {
     goldContributions = [...goldContributions, contribution];
   }
+  void persistGoldContribution(contribution);
+});
+
+$('goldAdjustmentForm').addEventListener('submit', event => {
+  event.preventDefault();
+  if (!goldContributionsCloudReady) {
+    toast('Đang tải danh sách tích góp. Vui lòng thử lại sau.');
+    return;
+  }
+  const contributionId = $('goldAdjustmentContributionId').value;
+  const adjustmentId = $('goldAdjustmentId').value;
+  const type = $('goldAdjustmentType').value;
+  const date = $('goldAdjustmentDate').value;
+  const amount = Number($('goldAdjustmentAmount').value);
+  const note = $('goldAdjustmentNote').value.trim();
+  const today = dateKey(new Date());
+  if (!['add', 'subtract'].includes(type)) {
+    toast('Loại điều chỉnh không hợp lệ.');
+    return;
+  }
+  if (!date || date > today || dateKey(new Date(`${date}T12:00:00`)) !== date) {
+    toast('Ngày điều chỉnh không hợp lệ hoặc ở tương lai.');
+    return;
+  }
+  if (!Number.isSafeInteger(amount) || amount < 1) {
+    toast('Số tiền điều chỉnh phải là số nguyên dương.');
+    return;
+  }
+  if (!note || note.length > 200) {
+    toast('Nhập ghi chú điều chỉnh (tối đa 200 ký tự).');
+    return;
+  }
+  const current = goldContributions.find(item => item.id === contributionId);
+  const month = current?.month || contributionId.slice(0, 7);
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month) || (!current && contributionId !== month)) {
+    toast('Không tìm thấy đợt tích góp để điều chỉnh.');
+    return;
+  }
+  const contribution = current
+    ? { ...current }
+    : {
+      id: contributionId,
+      month,
+      order: 1,
+      thanhHoaKpi: 0,
+      thanhHoaSalary: 0,
+      ngocYenKpi: 0,
+      ngocYenSalary: 0,
+      cash: 0,
+      fund: 0,
+      pig: 0,
+      extra: 0,
+      debt: 0,
+      purchaseDate: '',
+      status: 'CHƯA MUA'
+    };
+  const adjustments = Array.isArray(contribution.adjustments) ? [...contribution.adjustments] : [];
+  const adjustment = {
+    id: adjustmentId || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`),
+    type,
+    amount,
+    date,
+    note
+  };
+  if (adjustmentId) {
+    const index = adjustments.findIndex(item => item.id === adjustmentId);
+    if (index < 0) {
+      toast('Không tìm thấy khoản điều chỉnh cần sửa.');
+      return;
+    }
+    adjustments[index] = adjustment;
+  } else {
+    adjustments.push(adjustment);
+  }
+  contribution.adjustments = adjustments;
+  if (current) {
+    goldContributions = goldContributions.map(item => item.id === contributionId ? contribution : item);
+  } else {
+    goldContributions = [...goldContributions, contribution];
+  }
+  closeGoldAdjustment();
   void persistGoldContribution(contribution);
 });
 
@@ -741,9 +999,25 @@ $('closeGoldTransactionModal').addEventListener('click', resetGoldPurchaseForm);
 $('goldTransactionBackdrop').addEventListener('click', event => {
   if (event.target === $('goldTransactionBackdrop')) resetGoldPurchaseForm();
 });
+$('cancelGoldAdjustment').addEventListener('click', closeGoldAdjustment);
+$('closeGoldAdjustmentModal').addEventListener('click', closeGoldAdjustment);
+$('goldAdjustmentBackdrop').addEventListener('click', event => {
+  if (event.target === $('goldAdjustmentBackdrop')) closeGoldAdjustment();
+});
+$('cancelGoldMerge').addEventListener('click', closeGoldMergeModal);
+$('closeGoldMergeModal').addEventListener('click', closeGoldMergeModal);
+$('goldMergeBackdrop').addEventListener('click', event => {
+  if (event.target === $('goldMergeBackdrop')) closeGoldMergeModal();
+});
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && $('goldTransactionBackdrop').classList.contains('show')) {
     resetGoldPurchaseForm();
+  }
+  if (event.key === 'Escape' && $('goldAdjustmentBackdrop').classList.contains('show')) {
+    closeGoldAdjustment();
+  }
+  if (event.key === 'Escape' && $('goldMergeBackdrop').classList.contains('show')) {
+    closeGoldMergeModal();
   }
 });
 

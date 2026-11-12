@@ -1464,6 +1464,111 @@ td {
   margin-bottom: 0
 }
 
+.gold-section-tools {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px
+}
+
+.gold-merge-button {
+  padding: 6px 9px;
+  font-size: 12px;
+  white-space: nowrap
+}
+
+.gold-column-picker {
+  position: relative;
+  flex: 0 0 auto
+}
+
+.gold-column-picker>summary {
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  color: #526078;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+  list-style: none;
+  white-space: nowrap
+}
+
+.gold-column-picker>summary::-webkit-details-marker {
+  display: none
+}
+
+.gold-column-picker-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 8;
+  display: grid;
+  gap: 5px;
+  width: 220px;
+  max-height: min(360px, 70vh);
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--card);
+  box-shadow: 0 8px 24px #18263b24
+}
+
+.gold-column-picker-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 2px;
+  font-size: 12px;
+  cursor: pointer
+}
+
+.gold-column-picker-note {
+  margin: 0 0 3px;
+  color: var(--muted);
+  font-size: 11px
+}
+
+.gold-column-picker-options input {
+  margin: 0;
+  accent-color: var(--blue)
+}
+
+.gold-merge-modal {
+  width: min(520px, 100%)
+}
+
+.gold-merge-month-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 7px;
+  max-height: min(350px, 55vh);
+  overflow: auto;
+  margin: 14px 0
+}
+
+.gold-merge-month-options label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 12px;
+  cursor: pointer
+}
+
+.gold-merge-month-options label.is-disabled {
+  color: var(--muted);
+  background: #f7f9fc;
+  cursor: not-allowed
+}
+
+.gold-merge-month-options input {
+  margin: 0;
+  accent-color: var(--blue)
+}
+
 .gold-fund-section:not(.is-open) .gold-section-content {
   display: none
 }
@@ -1545,25 +1650,13 @@ td {
 .gold-contribution-table td:nth-child(1) {
   position: sticky;
   left: 0;
-  min-width: 56px;
-  width: 56px;
+  min-width: 136px;
+  width: 136px;
   background: var(--card);
   z-index: 2
 }
 
-.gold-contribution-table thead tr:first-child th:nth-child(2),
-.gold-contribution-table td:nth-child(2) {
-  position: sticky;
-  left: 56px;
-  min-width: 136px;
-  width: 136px;
-  background: var(--card);
-  z-index: 2;
-  box-shadow: 2px 0 4px #18263b12
-}
-
-.gold-contribution-table thead tr:first-child th:nth-child(1),
-.gold-contribution-table thead tr:first-child th:nth-child(2) {
+.gold-contribution-table thead tr:first-child th:nth-child(1) {
   z-index: 4
 }
 
@@ -1605,6 +1698,133 @@ td {
 .gold-contribution-status {
   min-width: 125px;
   padding: 7px 8px
+}
+
+.gold-adjustment-history h3 {
+  margin: 0;
+  font-size: 14px
+}
+
+.gold-adjustment-amount.add {
+  color: var(--green);
+  font-weight: 700
+}
+
+.gold-adjustment-amount.subtract {
+  color: var(--red);
+  font-weight: 700
+}
+
+.gold-adjustment-modal {
+  width: min(520px, 100%)
+}
+
+.gold-adjustment-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px
+}
+
+.gold-adjustment-form .modal-actions {
+  grid-column: 1 / -1
+}
+
+.gold-contribution-table .gold-merged-total-cell {
+  background: #f3f7ff;
+  text-align: center;
+  vertical-align: middle
+}
+
+.gold-contribution-table .gold-inline-ungroup {
+  min-width: 16px;
+  padding: 2px;
+  font-size: 10px;
+  line-height: 1
+}
+
+.gold-contribution-table .gold-merged-actions-cell {
+  vertical-align: middle
+}
+
+.gold-contribution-table .gold-merged-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px
+}
+
+.gold-contribution-table .gold-merged-action-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 0;
+  border-bottom: 1px solid #e6ebf2
+}
+
+.gold-contribution-table .gold-merged-action-item:last-child {
+  border-bottom: 0
+}
+
+.gold-contribution-table .gold-merged-action-item > small,
+.gold-contribution-table .gold-merged-value-note {
+  color: var(--muted);
+  font-size: 9px;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere
+}
+
+@media(min-width:900px) {
+  .gold-contribution-table {
+    width: max-content;
+    min-width: 0;
+    table-layout: fixed
+  }
+
+  .gold-contribution-table td {
+    padding: 5px 3px
+  }
+
+  .gold-contribution-table thead tr:first-child th:nth-child(1),
+  .gold-contribution-table td:nth-child(1) {
+    width: 60px;
+    min-width: 60px
+  }
+
+  .gold-contribution-input,
+  .gold-contribution-date,
+  .gold-contribution-status {
+    width: 100%;
+    min-width: 0;
+    padding: 5px 3px;
+    font-size: 11px
+  }
+
+  .gold-contribution-table th {
+    font-size: 9px;
+    letter-spacing: 0
+  }
+
+  .gold-contribution-total {
+    font-size: 11px
+  }
+
+  .gold-contribution-table small {
+    font-size: 9px
+  }
+
+  .gold-contribution-table .actions {
+    gap: 2px;
+    flex-wrap: nowrap
+  }
+
+  .gold-contribution-table .icon-btn {
+    padding: 4px
+  }
+}
+
+.gold-contribution-table [hidden] {
+  display: none !important
 }
 
 .report-day-total {
@@ -2258,6 +2478,19 @@ main {
     line-height: 1.4
   }
 
+  .gold-section-header {
+    flex-wrap: wrap;
+    align-items: flex-start
+  }
+
+  .gold-section-tools {
+    margin-left: auto
+  }
+
+  .gold-merge-month-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+  }
+
   .gold-month-table {
     width: 100%;
     min-width: 0;
@@ -2385,6 +2618,15 @@ main {
   }
 
   .gold-purchase-form .modal-actions {
+    grid-column: auto
+  }
+
+  .gold-adjustment-form {
+    grid-template-columns: 1fr
+  }
+
+  .gold-adjustment-form .span-2,
+  .gold-adjustment-form .modal-actions {
     grid-column: auto
   }
 }
