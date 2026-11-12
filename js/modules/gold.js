@@ -192,7 +192,7 @@ function renderPlainContributionRow(contributionRow) {
 
 function renderMergedContributionRows(contributionRows, groupTokens, monthPurchases, contributionsReady) {
     const orderedRows = contributionRows.slice().sort((a, b) =>
-        b.month.localeCompare(a.month) || a.order - b.order || a.id.localeCompare(b.id)
+        b.month.localeCompare(a.month) || b.order - a.order || b.id.localeCompare(a.id)
     );
     if (orderedRows.length < 2) return orderedRows.map(renderPlainContributionRow);
 
@@ -384,20 +384,31 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
         const entries = contributionsByMonth.get(month) || [{ ...EMPTY_CONTRIBUTION, id: month }];
         const movement = monthPurchases.get(month) || { purchased: 0, withdrawn: 0 };
         const monthRows = [];
-        entries.sort((a, b) => Number(a.order || 0) - Number(b.order || 0) || a.id.localeCompare(b.id));
+        entries.sort((a, b) => Number(b.order || 0) - Number(a.order || 0) || b.id.localeCompare(a.id));
+        const totalsById = new Map();
+        let monthCumulativeTotal = cumulativeTotal;
+        entries.slice().reverse().forEach(contribution => {
+            const adjustments = getValidContributionAdjustments(contribution, today);
+            const total = getContributionTotal(contribution, adjustments);
+            monthCumulativeTotal += total;
+            totalsById.set(contribution.id, {
+                adjustments,
+                total,
+                cumulativeTotal: monthCumulativeTotal
+            });
+        });
+        cumulativeTotal = monthCumulativeTotal;
         entries.forEach((contribution, index) => {
             const id = contribution.id;
-            const order = index + 1;
-            const adjustments = getValidContributionAdjustments(contribution, today);
-            const totalForEntry = getContributionTotal(contribution, adjustments);
-            cumulativeTotal += totalForEntry;
+            const order = entries.length - index;
+            const { adjustments, total: totalForEntry, cumulativeTotal: entryCumulativeTotal } = totalsById.get(id);
             adjustments.forEach(adjustment => {
                 const date = adjustment.date.split('-').reverse().join('/');
                 const amount = `${adjustment.type === 'subtract' ? '−' : '+'}${money(adjustment.amount)}`;
                 const type = adjustment.type === 'subtract' ? 'Trừ' : 'Cộng';
                 contributionAdjustmentRows.push({
                     date: adjustment.date,
-                    html: `<tr><td>${date}</td><td>${compactMonthLabel(month)} · Đợt ${Number(contribution.order) || 1}</td><td>${type}</td><td>${escapeHTML(adjustment.note)}</td><td class="gold-adjustment-amount ${adjustment.type}">${amount}</td><td><div class="actions"><button class="icon-btn" type="button" title="Sửa điều chỉnh" aria-label="Sửa điều chỉnh ${type.toLowerCase()} ${money(adjustment.amount)} ngày ${date}" data-edit-contribution-adjustment="${escapeHTML(id)}" data-adjustment-id="${escapeHTML(adjustment.id)}"${!contributionsReady ? ' disabled' : ''}>✎</button><button class="icon-btn delete" type="button" title="Xóa điều chỉnh" aria-label="Xóa điều chỉnh ${type.toLowerCase()} ${money(adjustment.amount)} ngày ${date}" data-delete-contribution-adjustment="${escapeHTML(id)}" data-adjustment-id="${escapeHTML(adjustment.id)}"${!contributionsReady ? ' disabled' : ''}>⌫</button></div></td></tr>`
+                    html: `<tr><td>${date}</td><td>${compactMonthLabel(month)} · Đợt ${order}</td><td>${type}</td><td>${escapeHTML(adjustment.note)}</td><td class="gold-adjustment-amount ${adjustment.type}">${amount}</td><td><div class="actions"><button class="icon-btn" type="button" title="Sửa điều chỉnh" aria-label="Sửa điều chỉnh ${type.toLowerCase()} ${money(adjustment.amount)} ngày ${date}" data-edit-contribution-adjustment="${escapeHTML(id)}" data-adjustment-id="${escapeHTML(adjustment.id)}"${!contributionsReady ? ' disabled' : ''}>✎</button><button class="icon-btn delete" type="button" title="Xóa điều chỉnh" aria-label="Xóa điều chỉnh ${type.toLowerCase()} ${money(adjustment.amount)} ngày ${date}" data-delete-contribution-adjustment="${escapeHTML(id)}" data-adjustment-id="${escapeHTML(adjustment.id)}"${!contributionsReady ? ' disabled' : ''}>⌫</button></div></td></tr>`
                 });
             });
             const amountCells = CONTRIBUTION_FIELDS.map(field =>
@@ -411,14 +422,14 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
                 ? `<button class="icon-btn delete" type="button" title="Xóa đợt góp" aria-label="Xóa đợt góp tháng ${monthLabel(month)}, đợt ${order}" data-delete-contribution="${escapeHTML(id)}"${!contributionsReady ? ' disabled' : ''}>⌫</button>`
                 : '';
             const adjustmentButton = `<button class="icon-btn" type="button" title="Thêm khoản điều chỉnh" aria-label="Thêm khoản điều chỉnh cho ${monthLabel(month)}" data-add-contribution-adjustment="${escapeHTML(id)}"${!contributionsReady ? ' disabled' : ''}>±</button>`;
-            const row = `<tr data-contribution-id="${escapeHTML(id)}" data-contribution-existing="${contributionExists}" data-contribution-month="${month}" data-contribution-order="${order}"><td data-column="month">${compactMonthLabel(month)}<small>Đợt ${order}</small></td>${amountCells.slice(0, 4).join('')}${cashCell}${amountCells.slice(4).join('')}<td class="gold-contribution-total" data-column="total" data-group-total-placeholder>${money(totalForEntry)}<small>Dư: ${money(cumulativeTotal)}</small></td><td data-column="purchaseDate" data-group-date-placeholder>${dateCell}<small>${movement.purchased ? `Đã mua ${formatQuantity(movement.purchased)}` : ''}${movement.withdrawn ? `Đã lấy ra ${formatQuantity(movement.withdrawn)}` : ''}</small></td><td data-column="status" data-group-status-placeholder>${statusCell}</td><td data-column="actions" data-group-actions-placeholder><div class="actions"><button class="icon-btn" type="button" title="Thêm đợt cùng tháng" aria-label="Thêm đợt cùng tháng ${monthLabel(month)}" data-add-contribution="${month}"${!contributionsReady ? ' disabled' : ''}>＋</button>${adjustmentButton}${deleteButton}</div></td></tr>`;
+            const row = `<tr data-contribution-id="${escapeHTML(id)}" data-contribution-existing="${contributionExists}" data-contribution-month="${month}" data-contribution-order="${order}"><td data-column="month">${compactMonthLabel(month)}<small>Đợt ${order}</small></td>${amountCells.slice(0, 4).join('')}${cashCell}${amountCells.slice(4).join('')}<td class="gold-contribution-total" data-column="total" data-group-total-placeholder>${money(totalForEntry)}<small>Dư: ${money(entryCumulativeTotal)}</small></td><td data-column="purchaseDate" data-group-date-placeholder>${dateCell}<small>${movement.purchased ? `Đã mua ${formatQuantity(movement.purchased)}` : ''}${movement.withdrawn ? `Đã lấy ra ${formatQuantity(movement.withdrawn)}` : ''}</small></td><td data-column="status" data-group-status-placeholder>${statusCell}</td><td data-column="actions" data-group-actions-placeholder><div class="actions"><button class="icon-btn" type="button" title="Thêm đợt cùng tháng" aria-label="Thêm đợt cùng tháng ${monthLabel(month)}" data-add-contribution="${month}"${!contributionsReady ? ' disabled' : ''}>＋</button>${adjustmentButton}${deleteButton}</div></td></tr>`;
             const contributionRow = {
                 id,
                 month,
                 order,
                 row,
                 total: totalForEntry,
-                cumulativeTotal,
+                cumulativeTotal: entryCumulativeTotal,
                 contribution
             };
             monthRows.push(contributionRow);
