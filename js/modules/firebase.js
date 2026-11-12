@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
 import { getAuth, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
-import { getDatabase, onValue, ref, update } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
+import { getDatabase, onValue, ref, set, update } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-database.js';
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAI-RIffDR2eBT3ZTV9DLDE38_Oz7_PTTI',
@@ -19,6 +19,24 @@ const database = getDatabase(app);
 const transactionsRef = ref(database, 'households/quanlygiadinh-94ced/transactions');
 const goldPurchasesRef = ref(database, 'households/quanlygiadinh-94ced/goldFund/purchases');
 const goldContributionsRef = ref(database, 'households/quanlygiadinh-94ced/goldFund/contributions');
+const mergedContributionMonthGroupsRef = ref(database, 'households/quanlygiadinh-94ced/goldFund/mergedContributionMonthGroups');
+const householdSettingsRef = ref(database, 'households/quanlygiadinh-94ced/settings');
+
+function encodeMergedContributionMonthGroups(groups) {
+  return {
+    initialized: true,
+    version: 1,
+    groups: groups.length ? groups : null
+  };
+}
+
+function decodeMergedContributionMonthGroups(value) {
+  if (value === null) return null;
+  if (value?.initialized === true && value.version === 1) {
+    return value.groups === null ? [] : value.groups;
+  }
+  return value;
+}
 
 function createRecordCollection(collectionRef) {
   let records = Object.create(null);
@@ -152,4 +170,22 @@ export function writeGoldContribution(contribution) {
 
 export function removeGoldContribution(id) {
   return goldContributionRecords.removeRecords([id]);
+}
+
+export function observeMergedContributionMonthGroups(callback, onError) {
+  return onValue(mergedContributionMonthGroupsRef, snapshot => {
+    callback(decodeMergedContributionMonthGroups(snapshot.val()));
+  }, onError);
+}
+
+export function writeMergedContributionMonthGroups(groups) {
+  return set(mergedContributionMonthGroupsRef, encodeMergedContributionMonthGroups(groups));
+}
+
+export function observeHouseholdSettings(callback, onError) {
+  return onValue(householdSettingsRef, snapshot => callback(snapshot.val()), onError);
+}
+
+export function writeHouseholdSettings(settings) {
+  return update(householdSettingsRef, settings);
 }

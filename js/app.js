@@ -1,5 +1,5 @@
-import { $, currentMonth, dateKey, loadTransactions, saveTransactions, loadGoldPurchases, saveGoldPurchases, loadGoldContributions, saveGoldContributions } from './modules/data.js';
-import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions, observeGoldPurchases, writeGoldPurchases, observeGoldContributions, writeGoldContributions, writeGoldContributionChanges, removeGoldContribution } from './modules/firebase.js';
+import { $, currentMonth, dateKey, clearLegacyLocalData } from './modules/data.js';
+import { observeAuth, login, loginWithGoogle, loginWithGoogleRedirect, completeGoogleRedirect, logout, sendPasswordReset, observeTransactions, writeTransactions, observeGoldPurchases, writeGoldPurchases, observeGoldContributions, writeGoldContributionChanges, removeGoldContribution, observeMergedContributionMonthGroups, writeMergedContributionMonthGroups, observeHouseholdSettings, writeHouseholdSettings } from './modules/firebase.js';
 import { getDailyLimitDebtBalance, renderReports } from './modules/reports.js';
 import { getFilteredTransactions } from './modules/transactions.js';
 import { getMergedContributionMonthGroups, getVisibleContributionColumns, renderGoldFund, saveMergedContributionMonthGroups, saveVisibleContributionColumns } from './modules/gold.js';
@@ -7,15 +7,19 @@ import { openModal, closeModal, fillCategories } from './modules/modal.js';
 import { initNavigation } from './modules/navigation.js';
 import { exportMonthlyReport, readTransactionsFile } from './modules/excel.js';
 
-let transactions = loadTransactions();
-let goldPurchases = loadGoldPurchases();
-let goldContributions = loadGoldContributions();
+let transactions = [];
+let goldPurchases = [];
+let goldContributions = [];
 let cloudReady = false;
 let goldCloudReady = false;
 let goldContributionsCloudReady = false;
+let householdSettingsCloudReady = false;
 let stopTransactionListener;
 let stopGoldPurchaseListener;
 let stopGoldContributionListener;
+let stopMergedContributionGroupsListener;
+let stopHouseholdSettingsListener;
+let mergedContributionGroupsCloudReady = false;
 let editingGoldPurchaseId = null;
 const goldContributionColumnPicker = $('goldContributionColumnPicker');
 const visibleContributionColumns = getVisibleContributionColumns();
@@ -34,16 +38,36 @@ function sameRecords(current, incoming) {
   return incoming.every(record => currentById.get(record.id) === JSON.stringify(record));
 }
 
-function refreshGoldUngroupButton() {
-  $('goldUngroupMonths').disabled = getMergedContributionMonthGroups().length === 0;
+function refreshGoldMergeButtons() {
+  const ready = mergedContributionGroupsCloudReady;
+  $('goldMergeMonths').disabled = !ready;
+  $('goldUngroupMonths').disabled = !ready || getMergedContributionMonthGroups().length === 0;
 }
 
-refreshGoldUngroupButton();
+refreshGoldMergeButtons();
+
+function syncMergedContributionMonthGroups(groups, previousGroups) {
+  writeMergedContributionMonthGroups(groups).catch(error => {
+    console.error('Không thể đồng bộ nhóm tháng đã gộp:', error);
+    if (JSON.stringify(getMergedContributionMonthGroups()) === JSON.stringify(groups)) {
+      saveMergedContributionMonthGroups(previousGroups);
+      refreshGoldMergeButtons();
+      renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+    }
+    toast('Không thể lưu nhóm tháng lên Firebase. Kiểm tra kết nối rồi thử lại.');
+  });
+}
 
 function toast(message) {
   $('toast').textContent = message;
   $('toast').classList.add('show');
   setTimeout(() => $('toast').classList.remove('show'), 3500);
+}
+
+try {
+  clearLegacyLocalData();
+} catch (error) {
+  console.error('Không thể xóa dữ liệu cũ khỏi bộ nhớ trình duyệt:', error);
 }
 
 function showAuthError(message) {
@@ -79,10 +103,9 @@ function showApp(user) {
 }
 
 async function persist(message) {
-  saveTransactions(transactions);
   render();
   if (!cloudReady) {
-    toast('Firebase chưa sẵn sàng; thay đổi hiện chỉ được lưu trên thiết bị này.');
+    toast('Firebase chưa sẵn sàng; thay đổi chưa được lưu. Vui lòng chờ đồng bộ rồi thử lại.');
     return;
   }
   try {
@@ -90,15 +113,14 @@ async function persist(message) {
     if (message) toast(message);
   } catch (error) {
     console.error('Không thể lưu giao dịch lên Firebase:', error);
-    toast('Lưu Firebase thất bại. Dữ liệu vẫn còn trên thiết bị này; hãy kiểm tra kết nối và quyền database.');
+    toast('Lưu giao dịch lên Firebase thất bại; thay đổi chưa được lưu. Kiểm tra kết nối và thử lại.');
   }
 }
 
 async function persistGoldPurchases(message) {
-  saveGoldPurchases(goldPurchases);
   renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
   if (!goldCloudReady) {
-    toast('Firebase chưa sẵn sàng; quỹ vàng chỉ được lưu trên thiết bị này.');
+    toast('Firebase chưa sẵn sàng; thay đổi quỹ vàng chưa được lưu. Vui lòng thử lại sau.');
     return;
   }
   try {
@@ -106,7 +128,7 @@ async function persistGoldPurchases(message) {
     if (message) toast(message);
   } catch (error) {
     console.error('Không thể lưu quỹ vàng lên Firebase:', error);
-    toast('Lưu quỹ vàng lên Firebase thất bại. Dữ liệu vẫn còn trên thiết bị này.');
+    toast('Lưu quỹ vàng lên Firebase thất bại; thay đổi chưa được lưu. Vui lòng thử lại.');
   }
 }
 
@@ -132,10 +154,9 @@ function createGoldContribution(month, id = month, order = 1) {
 }
 
 async function persistGoldContributions(contributions) {
-  saveGoldContributions(goldContributions);
   renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
   if (!goldContributionsCloudReady) {
-    toast('Firebase chưa sẵn sàng; khoản tích góp chỉ được lưu trên thiết bị này.');
+    toast('Firebase chưa sẵn sàng; thay đổi tích góp chưa được lưu. Vui lòng thử lại sau.');
     return;
   }
   try {
@@ -147,7 +168,7 @@ async function persistGoldContributions(contributions) {
       return;
     }
     const reason = error.code || error.message || 'không rõ nguyên nhân';
-    toast(`Lưu Firebase thất bại (${reason}). Dữ liệu vẫn còn trên thiết bị này.`);
+    toast(`Lưu Firebase thất bại (${reason}); thay đổi chưa được lưu.`);
   }
 }
 
@@ -183,6 +204,10 @@ function closeGoldAdjustment() {
 }
 
 function openGoldMergeModal() {
+  if (!mergedContributionGroupsCloudReady) {
+    toast('Đang đồng bộ nhóm tháng. Vui lòng thử lại sau giây lát.');
+    return;
+  }
   const groupedMonths = new Set(getMergedContributionMonthGroups().flat());
   const months = [...new Set([...$('goldContributionRows').querySelectorAll('tr[data-contribution-month]')]
     .map(row => row.dataset.contributionMonth)
@@ -214,9 +239,13 @@ function closeGoldMergeModal() {
 }
 
 function openGoldUngroupModal() {
+  if (!mergedContributionGroupsCloudReady) {
+    toast('Đang đồng bộ nhóm tháng. Vui lòng thử lại sau giây lát.');
+    return;
+  }
   const groups = getMergedContributionMonthGroups();
   if (!groups.length) {
-    refreshGoldUngroupButton();
+    refreshGoldMergeButtons();
     return;
   }
   const options = $('goldUngroupGroupOptions');
@@ -263,21 +292,7 @@ function startGoldPurchaseSync() {
   stopGoldPurchaseListener = observeGoldPurchases(async remotePurchases => {
     if (firstSnapshot) {
       firstSnapshot = false;
-      if (remotePurchases === null) {
-        const localPurchases = loadGoldPurchases();
-        if (localPurchases.length && confirm(`Tìm thấy ${localPurchases.length} giao dịch mua vàng cũ trên thiết bị này. Tải lên Firebase để dùng chung?`)) {
-          goldPurchases = localPurchases;
-          goldCloudReady = true;
-          $('goldPurchaseSubmit').disabled = false;
-          $('goldPurchaseToggle').disabled = false;
-          await persistGoldPurchases('Đã chuyển quỹ vàng lên Firebase');
-          return;
-        }
-        goldPurchases = [];
-      } else {
-        goldPurchases = remotePurchases;
-      }
-      saveGoldPurchases(goldPurchases);
+      goldPurchases = remotePurchases || [];
       goldCloudReady = true;
       $('goldPurchaseSubmit').disabled = false;
       $('goldPurchaseToggle').disabled = false;
@@ -288,7 +303,6 @@ function startGoldPurchaseSync() {
     const nextPurchases = remotePurchases || [];
     if (sameRecords(goldPurchases, nextPurchases)) return;
     goldPurchases = nextPurchases;
-    saveGoldPurchases(goldPurchases);
     renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
   }, error => {
     goldCloudReady = false;
@@ -309,37 +323,7 @@ function startGoldContributionSync() {
   stopGoldContributionListener = observeGoldContributions(async remoteContributions => {
     if (firstSnapshot) {
       firstSnapshot = false;
-      if (remoteContributions === null) {
-        const localContributions = loadGoldContributions();
-        if (localContributions.length) {
-          if (!confirm(`Tìm thấy danh sách tích góp cũ trên thiết bị này (${localContributions.length} tháng). Tải lên Firebase để dùng chung?`)) {
-            goldContributions = localContributions;
-            saveGoldContributions(goldContributions);
-            stopGoldContributionListener?.();
-            stopGoldContributionListener = undefined;
-            renderGoldFund(goldPurchases, goldContributions, false);
-            toast('Danh sách cũ được giữ trên thiết bị này; đăng nhập lại để đồng bộ.');
-            return;
-          }
-          goldContributions = localContributions;
-          saveGoldContributions(goldContributions);
-          goldContributionsCloudReady = true;
-          try {
-            await writeGoldContributions(goldContributions);
-          } catch (error) {
-            goldContributionsCloudReady = false;
-            renderGoldFund(goldPurchases, goldContributions, false);
-            console.error('Không thể tải danh sách tích góp cũ lên Firebase:', error);
-            toast('Không thể chuyển danh sách tích góp lên Firebase. Dữ liệu cũ vẫn còn trên thiết bị này.');
-            return;
-          }
-        } else {
-          goldContributions = [];
-        }
-      } else {
-        goldContributions = remoteContributions;
-      }
-      saveGoldContributions(goldContributions);
+      goldContributions = remoteContributions || [];
       goldContributionsCloudReady = true;
       renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
       return;
@@ -348,7 +332,6 @@ function startGoldContributionSync() {
     const nextContributions = remoteContributions || [];
     if (sameRecords(goldContributions, nextContributions)) return;
     goldContributions = nextContributions;
-    saveGoldContributions(goldContributions);
     renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
   }, error => {
     goldContributionsCloudReady = false;
@@ -360,32 +343,150 @@ function startGoldContributionSync() {
   });
 }
 
+function startMergedContributionMonthGroupSync() {
+  stopMergedContributionGroupsListener?.();
+  mergedContributionGroupsCloudReady = false;
+  refreshGoldMergeButtons();
+  let firstSnapshot = true;
+  stopMergedContributionGroupsListener = observeMergedContributionMonthGroups(remoteGroups => {
+    if (firstSnapshot) {
+      firstSnapshot = false;
+      if (!Array.isArray(remoteGroups) && remoteGroups !== null) {
+        mergedContributionGroupsCloudReady = false;
+        refreshGoldMergeButtons();
+        console.error('Dữ liệu nhóm tháng trên Firebase không hợp lệ:', remoteGroups);
+        toast('Dữ liệu nhóm tháng trên Firebase không hợp lệ.');
+        return;
+      }
+      saveMergedContributionMonthGroups(remoteGroups || []);
+      mergedContributionGroupsCloudReady = true;
+      refreshGoldMergeButtons();
+      renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+      return;
+    }
+
+    const nextGroups = remoteGroups === null ? [] : remoteGroups;
+    if (!Array.isArray(nextGroups)) {
+      mergedContributionGroupsCloudReady = false;
+      refreshGoldMergeButtons();
+      console.error('Dữ liệu nhóm tháng trên Firebase không hợp lệ:', remoteGroups);
+      toast('Dữ liệu nhóm tháng trên Firebase không hợp lệ.');
+      return;
+    }
+    const currentGroups = getMergedContributionMonthGroups();
+    try {
+      if (JSON.stringify(currentGroups) !== JSON.stringify(nextGroups)) {
+        saveMergedContributionMonthGroups(nextGroups);
+        renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+      }
+      mergedContributionGroupsCloudReady = true;
+      refreshGoldMergeButtons();
+    } catch (error) {
+      mergedContributionGroupsCloudReady = false;
+      refreshGoldMergeButtons();
+      console.error('Không thể áp dụng nhóm tháng từ Firebase:', error);
+      toast(error.message || 'Không thể áp dụng nhóm tháng từ Firebase.');
+    }
+  }, error => {
+    mergedContributionGroupsCloudReady = false;
+    refreshGoldMergeButtons();
+    console.error('Không thể đồng bộ nhóm tháng qua Firebase:', error);
+    toast(error.code === 'PERMISSION_DENIED'
+      ? 'Firebase từ chối quyền truy cập nhóm tháng. Kiểm tra Database Rules.'
+      : 'Không thể đồng bộ nhóm tháng. Kiểm tra kết nối rồi thử lại.');
+  });
+}
+
+function setHouseholdSettingsControlsEnabled(enabled) {
+  $('saveSettings').disabled = !enabled;
+  goldContributionColumnPicker.querySelectorAll('[data-contribution-column-toggle]').forEach(input => {
+    input.disabled = !enabled;
+  });
+}
+
+function applyHouseholdSettings(settings) {
+  const familyName = typeof settings?.familyName === 'string' && settings.familyName.trim()
+    ? settings.familyName.trim()
+    : 'Gia Đình';
+  const savedColumns = settings?.visibleContributionColumnsInitialized === true
+    ? (Array.isArray(settings.visibleContributionColumns) ? settings.visibleContributionColumns : [])
+    : settings?.visibleContributionColumns;
+  saveVisibleContributionColumns(Array.isArray(savedColumns) ? savedColumns : undefined);
+  $('familyName').value = familyName;
+  $('brandName').textContent = familyName;
+  const columns = getVisibleContributionColumns();
+  goldContributionColumnPicker.querySelectorAll('[data-contribution-column-toggle]').forEach(input => {
+    input.checked = columns.has(input.dataset.contributionColumnToggle);
+  });
+}
+
+async function persistHouseholdSettings(settings) {
+  if (!householdSettingsCloudReady) {
+    toast('Cài đặt Firebase chưa sẵn sàng; thay đổi chưa được lưu.');
+    return false;
+  }
+  try {
+    const updates = { ...settings };
+    if (Array.isArray(updates.visibleContributionColumns)) {
+      updates.visibleContributionColumnsInitialized = true;
+      updates.visibleContributionColumns = updates.visibleContributionColumns.length
+        ? updates.visibleContributionColumns
+        : null;
+    }
+    await writeHouseholdSettings(updates);
+    return true;
+  } catch (error) {
+    console.error('Không thể lưu cài đặt gia đình lên Firebase:', error);
+    toast('Không thể lưu cài đặt lên Firebase. Kiểm tra kết nối rồi thử lại.');
+    return false;
+  }
+}
+
+function startHouseholdSettingsSync() {
+  stopHouseholdSettingsListener?.();
+  householdSettingsCloudReady = false;
+  setHouseholdSettingsControlsEnabled(false);
+  stopHouseholdSettingsListener = observeHouseholdSettings(settings => {
+    if (settings !== null && (typeof settings !== 'object' || Array.isArray(settings))) {
+      console.error('Cài đặt Firebase không hợp lệ:', settings);
+      householdSettingsCloudReady = false;
+      setHouseholdSettingsControlsEnabled(false);
+      toast('Cài đặt gia đình trên Firebase không hợp lệ.');
+      return;
+    }
+    applyHouseholdSettings(settings);
+    householdSettingsCloudReady = true;
+    setHouseholdSettingsControlsEnabled(true);
+    renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+  }, error => {
+    householdSettingsCloudReady = false;
+    setHouseholdSettingsControlsEnabled(false);
+    console.error('Không thể đồng bộ cài đặt gia đình qua Firebase:', error);
+    toast(error.code === 'PERMISSION_DENIED'
+      ? 'Firebase từ chối quyền truy cập cài đặt gia đình.'
+      : 'Không thể tải cài đặt gia đình từ Firebase. Kiểm tra kết nối rồi thử lại.');
+  });
+}
+
 function startTransactionSync(user) {
   stopTransactionListener?.();
   cloudReady = false;
+  transactions = [];
+  goldPurchases = [];
+  goldContributions = [];
+  saveMergedContributionMonthGroups([]);
+  applyHouseholdSettings(null);
   showApp(user);
   render();
+  startHouseholdSettingsSync();
   startGoldPurchaseSync();
   startGoldContributionSync();
+  startMergedContributionMonthGroupSync();
   let firstSnapshot = true;
   stopTransactionListener = observeTransactions(async remoteTransactions => {
     if (firstSnapshot) {
       firstSnapshot = false;
-      if (remoteTransactions === null) {
-        const localTransactions = loadTransactions();
-        if (localTransactions.length && confirm(`Tìm thấy ${localTransactions.length} giao dịch cũ trên thiết bị này. Tải những giao dịch đó lên Firebase để dùng chung?`)) {
-          transactions = localTransactions;
-          showApp(user);
-          render();
-          cloudReady = true;
-          await persist('Đã chuyển dữ liệu cũ lên Firebase');
-          return;
-        }
-        transactions = [];
-      } else {
-        transactions = remoteTransactions;
-        saveTransactions(transactions);
-      }
+      transactions = remoteTransactions || [];
       cloudReady = true;
       showApp(user);
       render();
@@ -395,7 +496,6 @@ function startTransactionSync(user) {
     const nextTransactions = remoteTransactions || [];
     if (sameRecords(transactions, nextTransactions)) return;
     transactions = nextTransactions;
-    saveTransactions(transactions);
     render();
   }, error => {
     cloudReady = false;
@@ -504,7 +604,6 @@ $('goldContributionRows').addEventListener('click', event => {
   const contribution = goldContributions.find(item => item.id === id);
   if (!contribution || !confirm(`Xóa đợt tích góp tháng ${contribution.month || contribution.id.slice(0, 7)}?`)) return;
   goldContributions = goldContributions.filter(item => item.id !== id);
-  saveGoldContributions(goldContributions);
   renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
   removeGoldContribution(id).catch(error => {
     console.error('Không thể xóa đợt tích góp khỏi Firebase:', error);
@@ -516,6 +615,10 @@ $('goldMergeMonths').addEventListener('click', openGoldMergeModal);
 $('goldUngroupMonths').addEventListener('click', openGoldUngroupModal);
 $('goldMergeForm').addEventListener('submit', event => {
   event.preventDefault();
+  if (!mergedContributionGroupsCloudReady) {
+    toast('Đang đồng bộ nhóm tháng. Vui lòng thử lại sau giây lát.');
+    return;
+  }
   const selectedMonths = [...$('goldMergeMonthOptions').querySelectorAll('[data-merge-month]:checked')]
     .map(input => input.value);
   if (selectedMonths.length < 2) {
@@ -523,10 +626,13 @@ $('goldMergeForm').addEventListener('submit', event => {
     return;
   }
   try {
-    saveMergedContributionMonthGroups([...getMergedContributionMonthGroups(), selectedMonths]);
-    refreshGoldUngroupButton();
+    const previousGroups = getMergedContributionMonthGroups();
+    const groups = [...previousGroups, selectedMonths];
+    saveMergedContributionMonthGroups(groups);
+    refreshGoldMergeButtons();
     closeGoldMergeModal();
     renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+    syncMergedContributionMonthGroups(groups, previousGroups);
   } catch (error) {
     console.error('Không thể gộp các tháng:', error);
     toast(error.message || 'Không thể gộp các tháng đã chọn.');
@@ -535,6 +641,10 @@ $('goldMergeForm').addEventListener('submit', event => {
 
 $('goldUngroupForm').addEventListener('submit', event => {
   event.preventDefault();
+  if (!mergedContributionGroupsCloudReady) {
+    toast('Đang đồng bộ nhóm tháng. Vui lòng thử lại sau giây lát.');
+    return;
+  }
   const selectedGroup = $('goldUngroupGroupOptions').querySelector('[name="goldUngroupGroup"]:checked')?.value;
   if (!selectedGroup) {
     toast('Chọn nhóm tháng cần bỏ gộp.');
@@ -544,15 +654,16 @@ $('goldUngroupForm').addEventListener('submit', event => {
   const remainingGroups = groups.filter(group => group.join('|') !== selectedGroup);
   if (remainingGroups.length === groups.length) {
     closeGoldUngroupModal();
-    refreshGoldUngroupButton();
+    refreshGoldMergeButtons();
     toast('Không tìm thấy nhóm tháng cần bỏ gộp.');
     return;
   }
   try {
     saveMergedContributionMonthGroups(remainingGroups);
-    refreshGoldUngroupButton();
+    refreshGoldMergeButtons();
     closeGoldUngroupModal();
     renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+    syncMergedContributionMonthGroups(remainingGroups, groups);
   } catch (error) {
     console.error('Không thể bỏ gộp tháng:', error);
     toast(error.message || 'Không thể bỏ gộp tháng.');
@@ -588,18 +699,32 @@ $('goldContributionAdjustmentRows').addEventListener('click', event => {
   void persistGoldContribution(updatedContribution);
 });
 
-goldContributionColumnPicker.addEventListener('change', event => {
+goldContributionColumnPicker.addEventListener('change', async event => {
   const input = event.target.closest('[data-contribution-column-toggle]');
   if (!input) return;
+  const previousColumns = getVisibleContributionColumns();
+  if (!householdSettingsCloudReady) {
+    input.checked = previousColumns.has(input.dataset.contributionColumnToggle);
+    toast('Cài đặt Firebase chưa sẵn sàng; vui lòng thử lại sau.');
+    return;
+  }
   const selectedColumns = [...goldContributionColumnPicker.querySelectorAll('[data-contribution-column-toggle]:checked')]
     .map(checkbox => checkbox.dataset.contributionColumnToggle);
   try {
     saveVisibleContributionColumns(selectedColumns);
     renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+    const saved = await persistHouseholdSettings({ visibleContributionColumns: selectedColumns });
+    if (!saved) {
+      saveVisibleContributionColumns([...previousColumns].filter(key => key !== 'month' && key !== 'actions'));
+      goldContributionColumnPicker.querySelectorAll('[data-contribution-column-toggle]').forEach(checkbox => {
+        checkbox.checked = previousColumns.has(checkbox.dataset.contributionColumnToggle);
+      });
+      renderGoldFund(goldPurchases, goldContributions, goldContributionsCloudReady);
+    }
   } catch (error) {
     console.error('Không thể lưu tùy chọn cột tích góp:', error);
-    input.checked = !input.checked;
-    toast('Không thể lưu tùy chọn cột. Vui lòng kiểm tra bộ nhớ trình duyệt.');
+    input.checked = previousColumns.has(input.dataset.contributionColumnToggle);
+    toast('Không thể cập nhật tùy chọn cột.');
   }
 });
 
@@ -1128,14 +1253,23 @@ $('excelFileInput').addEventListener('change', async event => {
     event.target.value = '';
   }
 });
-$('saveSettings').onclick = () => {
+$('saveSettings').onclick = async () => {
+  if (!householdSettingsCloudReady) {
+    toast('Cài đặt Firebase chưa sẵn sàng; vui lòng thử lại sau.');
+    return;
+  }
+  const previousName = $('brandName').textContent || 'Gia Đình';
   const name = $('familyName').value.trim() || 'Gia Đình';
-  $('brandName').textContent = name;
-  localStorage.setItem('giadinh_family_name', name);
-  toast('Đã lưu tên sổ trên giao diện');
+  if (await persistHouseholdSettings({ familyName: name })) {
+    $('familyName').value = name;
+    $('brandName').textContent = name;
+    toast('Đã lưu tên sổ lên Firebase');
+  } else {
+    $('familyName').value = previousName;
+  }
 };
-$('familyName').value = localStorage.getItem('giadinh_family_name') || 'Gia Đình';
-$('brandName').textContent = $('familyName').value;
+$('familyName').value = 'Gia Đình';
+$('brandName').textContent = 'Gia Đình';
 
 $('manageFunds').onclick = () => {
   const name = prompt('Nhập tên nguồn tiền mới:');
@@ -1147,7 +1281,7 @@ $('manageFunds').onclick = () => {
 };
 
 function clearData() {
-  if (confirm('Bạn chắc chắn muốn xóa toàn bộ giao dịch đã lưu trên Firebase và thiết bị này?')) {
+  if (confirm('Bạn chắc chắn muốn xóa toàn bộ giao dịch đã lưu trên Firebase?')) {
     transactions = [];
     void persist('Đã xóa toàn bộ giao dịch');
   }
@@ -1167,12 +1301,25 @@ observeAuth(user => {
     stopGoldPurchaseListener = undefined;
     stopGoldContributionListener?.();
     stopGoldContributionListener = undefined;
+    stopMergedContributionGroupsListener?.();
+    stopMergedContributionGroupsListener = undefined;
+    stopHouseholdSettingsListener?.();
+    stopHouseholdSettingsListener = undefined;
     cloudReady = false;
     goldCloudReady = false;
     goldContributionsCloudReady = false;
+    householdSettingsCloudReady = false;
+    mergedContributionGroupsCloudReady = false;
+    transactions = [];
+    goldPurchases = [];
+    goldContributions = [];
+    saveMergedContributionMonthGroups([]);
+    applyHouseholdSettings(null);
+    setHouseholdSettingsControlsEnabled(false);
+    refreshGoldMergeButtons();
     $('goldPurchaseSubmit').disabled = true;
     $('goldPurchaseToggle').disabled = true;
-    renderGoldFund(goldPurchases, goldContributions, false);
+    render();
     $('appShell').hidden = true;
     $('authScreen').hidden = false;
     $('loginPassword').value = '';

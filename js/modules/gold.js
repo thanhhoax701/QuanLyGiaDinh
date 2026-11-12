@@ -34,54 +34,23 @@ const CONTRIBUTION_COLUMN_GROUPS = {
     thanhHoa: ['thanhHoaKpi', 'thanhHoaSalary'],
     ngocYen: ['ngocYenKpi', 'ngocYenSalary']
 };
-const CONTRIBUTION_COLUMN_STORAGE_KEY = 'giadinh_gold_contribution_columns';
-const MERGED_MONTH_GROUPS_STORAGE_KEY = 'giadinh_gold_merged_month_groups';
 const FIXED_CONTRIBUTION_COLUMNS = ['month', 'actions'];
 const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
-function loadVisibleContributionColumns() {
-    try {
-        const saved = JSON.parse(localStorage.getItem(CONTRIBUTION_COLUMN_STORAGE_KEY) || 'null');
-        const optionalColumns = Array.isArray(saved)
-            ? saved.filter(key => CONTRIBUTION_COLUMN_KEYS.includes(key))
-            : CONTRIBUTION_COLUMN_KEYS;
-        return new Set([...FIXED_CONTRIBUTION_COLUMNS, ...optionalColumns]);
-    } catch (error) {
-        console.error('Không thể tải tùy chọn cột tích góp:', error);
-        return new Set([...FIXED_CONTRIBUTION_COLUMNS, ...CONTRIBUTION_COLUMN_KEYS]);
-    }
+function defaultVisibleContributionColumns() {
+    return new Set([...FIXED_CONTRIBUTION_COLUMNS, ...CONTRIBUTION_COLUMN_KEYS]);
 }
 
-let visibleContributionColumns = loadVisibleContributionColumns();
+let visibleContributionColumns = defaultVisibleContributionColumns();
 
-function loadMergedContributionMonthGroups() {
-    try {
-        const saved = JSON.parse(localStorage.getItem(MERGED_MONTH_GROUPS_STORAGE_KEY) || '[]');
-        if (!Array.isArray(saved)) return [];
-        const usedMonths = new Set();
-        return saved.reduce((groups, group) => {
-            if (!Array.isArray(group)) return groups;
-            const months = [...new Set(group.filter(month => typeof month === 'string' && MONTH_PATTERN.test(month)))].sort();
-            if (months.length < 2 || months.some(month => usedMonths.has(month))) return groups;
-            months.forEach(month => usedMonths.add(month));
-            groups.push(months);
-            return groups;
-        }, []);
-    } catch (error) {
-        console.error('Không thể tải nhóm tháng đã gộp:', error);
-        return [];
-    }
-}
-
-let mergedContributionMonthGroups = loadMergedContributionMonthGroups();
+let mergedContributionMonthGroups = [];
 
 export function getVisibleContributionColumns() {
     return new Set(visibleContributionColumns);
 }
 
-export function saveVisibleContributionColumns(columns) {
+export function saveVisibleContributionColumns(columns = CONTRIBUTION_COLUMN_KEYS) {
     const optionalColumns = [...new Set(columns)].filter(key => CONTRIBUTION_COLUMN_KEYS.includes(key));
-    localStorage.setItem(CONTRIBUTION_COLUMN_STORAGE_KEY, JSON.stringify(optionalColumns));
     visibleContributionColumns = new Set([...FIXED_CONTRIBUTION_COLUMNS, ...optionalColumns]);
 }
 
@@ -102,7 +71,6 @@ export function saveMergedContributionMonthGroups(groups) {
         months.forEach(month => usedMonths.add(month));
         return months;
     });
-    localStorage.setItem(MERGED_MONTH_GROUPS_STORAGE_KEY, JSON.stringify(normalizedGroups));
     mergedContributionMonthGroups = normalizedGroups;
 }
 

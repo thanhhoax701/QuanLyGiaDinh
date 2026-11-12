@@ -14,10 +14,17 @@ export const sum = list => list.reduce((a,t)=>a+Number(t.amount||0),0);
 export const expenses = list => list.filter(t=>t.type==='expense');
 export const incomes = list => list.filter(t=>t.type==='income');
 export const monthTransactions = (list,m) => list.filter(t=>monthKey(txDate(t))===m);
-export function loadTransactions(){try{return JSON.parse(localStorage.getItem('giadinh_transactions')||'[]')}catch{return []}}
-export function saveTransactions(list){localStorage.setItem('giadinh_transactions',JSON.stringify(list))}
-export function loadGoldPurchases(){try{const purchases=JSON.parse(localStorage.getItem('giadinh_gold_purchases')||'[]');return Array.isArray(purchases)?purchases:[]}catch{return []}}
-export function saveGoldPurchases(list){localStorage.setItem('giadinh_gold_purchases',JSON.stringify(list))}
-export function loadGoldContributions(){try{const contributions=JSON.parse(localStorage.getItem('giadinh_gold_contributions')||'[]');return Array.isArray(contributions)?contributions:[]}catch{return []}}
-export function saveGoldContributions(list){localStorage.setItem('giadinh_gold_contributions',JSON.stringify(list))}
+const LEGACY_LOCAL_STORAGE_KEYS = [
+  'giadinh_transactions',
+  'giadinh_gold_purchases',
+  'giadinh_gold_contributions',
+  'giadinh_gold_merged_month_groups',
+  'giadinh_gold_contribution_columns',
+  'giadinh_family_name'
+];
+
+export function clearLegacyLocalData() {
+  LEGACY_LOCAL_STORAGE_KEYS.forEach(key => localStorage.removeItem(key));
+}
+
 export function formatDate(s){const d=new Date(s);return isNaN(d)?'—':`${pad(d.getDate())}/${pad(d.getMonth()+1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`}
