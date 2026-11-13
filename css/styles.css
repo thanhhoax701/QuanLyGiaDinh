@@ -2504,7 +2504,10 @@ main {
   }
 
   .gold-section-tools {
-    margin-left: auto
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    max-width: 100%;
+    margin-left: 0
   }
 
   .gold-merge-month-options {
@@ -2514,6 +2517,45 @@ main {
   .gold-column-picker[open] .gold-column-picker-options {
     z-index: 31;
     max-height: min(360px, 70vh)
+  }
+
+  .gold-contribution-table thead tr:first-child th:nth-child(1),
+  .gold-contribution-table td:nth-child(1) {
+    width: 92px;
+    min-width: 92px
+  }
+
+  .gold-contribution-table thead th[data-column="actions"],
+  .gold-contribution-table tbody td[data-column="actions"] {
+    position: sticky;
+    right: 0;
+    z-index: 3;
+    width: 96px;
+    min-width: 96px;
+    background: var(--card)
+  }
+
+  .gold-contribution-table thead th[data-column="actions"] {
+    z-index: 5
+  }
+
+  .gold-contribution-table tbody td[data-column="actions"] {
+    box-shadow: -5px 0 8px #18263b0d
+  }
+
+  .gold-contribution-table td[data-column="actions"] .actions {
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 2px
+  }
+
+  .gold-contribution-table td[data-column="actions"] .icon-btn {
+    padding: 5px 4px
+  }
+
+  .gold-contribution-input {
+    width: 92px;
+    min-width: 92px
   }
 
   .gold-month-table {
