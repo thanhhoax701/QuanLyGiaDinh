@@ -1971,6 +1971,46 @@ td {
     table-layout: fixed
   }
 
+  .gold-contribution-table tbody > tr > td {
+    border-bottom-color: #e2e8f0
+  }
+
+  .gold-contribution-table tbody tr:not(.gold-contribution-group-row) > td {
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0
+  }
+
+  .gold-contribution-table tbody tr:not(.gold-contribution-group-row) > td:first-child {
+    border-left: 1px solid #e2e8f0
+  }
+
+  .gold-contribution-table tbody tr:not(.gold-contribution-group-row) > td[data-column="actions"] {
+    border-right: 1px solid #e2e8f0
+  }
+
+  .gold-contribution-table tbody tr.gold-contribution-group-row > td:not(.gold-merged-total-cell):not(.gold-merged-shared-cell):not(.gold-merged-actions-cell) {
+    background: #f8fbff
+  }
+
+  .gold-contribution-table tbody tr.gold-contribution-group-row > td:first-child {
+    border-left: 1px solid #c8d7f2
+  }
+
+  .gold-contribution-table tbody tr.gold-contribution-group-row > td[data-column="actions"] {
+    border-right: 1px solid #c8d7f2
+  }
+
+  .gold-contribution-table tbody tr.gold-contribution-group-row-first > td {
+    border-top: 1px solid #c8d7f2
+  }
+
+  .gold-contribution-table tbody tr.gold-contribution-group-row-last > td,
+  .gold-contribution-table tbody tr.gold-contribution-group-row-first > .gold-merged-total-cell,
+  .gold-contribution-table tbody tr.gold-contribution-group-row-first > .gold-merged-shared-cell,
+  .gold-contribution-table tbody tr.gold-contribution-group-row-first > .gold-merged-actions-cell {
+    border-bottom: 1px solid #c8d7f2
+  }
+
   .gold-contribution-table td {
     padding: 5px 3px
   }
@@ -2713,6 +2753,102 @@ main {
     border-radius: 12px;
     background: var(--card);
     box-shadow: 0 2px 8px #18263b08
+  }
+
+  .gold-contribution-group-card {
+    display: grid;
+    gap: 9px;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    background: #f8fbff
+  }
+
+  .gold-contribution-group-header {
+    display: grid;
+    gap: 4px
+  }
+
+  .gold-contribution-group-header span {
+    color: #2675f5;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase
+  }
+
+  .gold-contribution-group-header strong {
+    font-size: 12px;
+    line-height: 1.4;
+    overflow-wrap: anywhere
+  }
+
+  .gold-contribution-group-details summary {
+    color: #2675f5;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer
+  }
+
+  .gold-contribution-group-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 9px
+  }
+
+  .gold-contribution-group-entries {
+    display: grid;
+    gap: 8px
+  }
+
+  .gold-contribution-group-entries .gold-contribution-card {
+    gap: 0;
+    padding: 0;
+    box-shadow: none
+  }
+
+  .gold-contribution-group-entry-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 10px;
+    color: #334155;
+    font-size: 12px;
+    cursor: pointer
+  }
+
+  .gold-contribution-group-entry-summary strong {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    font-size: 12px
+  }
+
+  .gold-contribution-group-entry-summary strong small {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap
+  }
+
+  .gold-contribution-group-entry-summary span {
+    color: #2675f5;
+    font-weight: 700;
+    white-space: nowrap
+  }
+
+  .gold-contribution-group-entry-content {
+    display: grid;
+    gap: 10px;
+    padding: 0 10px 10px
+  }
+
+  .gold-contribution-group-entry-actions {
+    justify-content: flex-end;
+    padding: 8px 0;
+    border-top: 1px solid #edf1f6
   }
 
   .gold-contribution-card-header {

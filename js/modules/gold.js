@@ -193,12 +193,10 @@ function renderPlainContributionRow(contributionRow) {
         .replace(' data-group-actions-placeholder', '');
 }
 
-function renderMergedContributionRows(contributionRows, groupTokens, monthPurchases, contributionsReady) {
+function getMergedContributionGroupInfo(contributionRows, monthPurchases) {
     const orderedRows = contributionRows.slice().sort((a, b) =>
         b.month.localeCompare(a.month) || b.order - a.order || b.id.localeCompare(a.id)
     );
-    if (orderedRows.length < 2) return orderedRows.map(renderPlainContributionRow);
-
     const chronologicalRows = contributionRows.slice().sort((a, b) =>
         a.month.localeCompare(b.month) || a.order - b.order || a.id.localeCompare(b.id)
     );
@@ -234,6 +232,34 @@ function renderMergedContributionRows(contributionRows, groupTokens, monthPurcha
         groupMovement.purchased ? `Đã mua ${formatQuantity(groupMovement.purchased)}` : '',
         groupMovement.withdrawn ? `Đã lấy ra ${formatQuantity(groupMovement.withdrawn)}` : ''
     ].filter(Boolean).join(' · ');
+    return {
+        orderedRows,
+        groupTotal,
+        cumulativeTotal,
+        groupLabel,
+        mixedDate,
+        sharedDate,
+        mixedStatus,
+        sharedStatus,
+        movementNotes
+    };
+}
+
+function renderMergedContributionRows(contributionRows, groupTokens, monthPurchases, contributionsReady) {
+    const group = getMergedContributionGroupInfo(contributionRows, monthPurchases);
+    const {
+        orderedRows,
+        groupTotal,
+        cumulativeTotal,
+        groupLabel,
+        mixedDate,
+        sharedDate,
+        mixedStatus,
+        sharedStatus,
+        movementNotes
+    } = group;
+    if (orderedRows.length < 2) return orderedRows.map(renderPlainContributionRow);
+
     const mergedDateCell = `<td class="gold-merged-shared-cell" data-column="purchaseDate" rowspan="${orderedRows.length}">${formatMergedDateInput(sharedDate, groupTokens, groupLabel, !contributionsReady)}${mixedDate ? '<small class="gold-merged-value-note">Ngày mua khác nhau</small>' : ''}${movementNotes ? `<small>${movementNotes}</small>` : ''}</td>`;
     const mergedStatusCell = `<td class="gold-merged-shared-cell" data-column="status" rowspan="${orderedRows.length}">${formatMergedStatusSelect(sharedStatus, groupTokens, groupLabel, !contributionsReady, mixedStatus)}</td>`;
     const mergedActions = orderedRows.map(({ month, order, row }) => {
@@ -246,7 +272,13 @@ function renderMergedContributionRows(contributionRows, groupTokens, monthPurcha
         const totalCell = index === 0
             ? renderMergedTotalCell(groupTotal, cumulativeTotal, orderedRows.length)
             : '';
+        const groupRowClasses = [
+            'gold-contribution-group-row',
+            index === 0 ? 'gold-contribution-group-row-first' : '',
+            index === orderedRows.length - 1 ? 'gold-contribution-group-row-last' : ''
+        ].filter(Boolean).join(' ');
         return row
+            .replace('<tr ', `<tr class="${groupRowClasses}" `)
             .replace(/<td class="gold-contribution-total" data-column="total" data-group-total-placeholder>[\s\S]*?<\/td>/, totalCell)
             .replace(/<td data-column="purchaseDate" data-group-date-placeholder>[\s\S]*?<\/td>/, index === 0 ? mergedDateCell : '')
             .replace(/<td data-column="status" data-group-status-placeholder>[\s\S]*?<\/td>/, index === 0 ? mergedStatusCell : '')
@@ -293,7 +325,7 @@ function renderMergedTotalCell(total, cumulativeTotal, rowCount) {
     return `<td class="gold-contribution-total gold-merged-total-cell" data-column="total" rowspan="${rowCount}">${money(total)}<small>Dư: ${money(cumulativeTotal)}</small></td>`;
 }
 
-function renderMobileContributionCard(contributionRow, monthPurchases, contributionsReady, groupRows, groupTokens) {
+function renderMobileContributionCard(contributionRow, monthPurchases, contributionsReady, grouped = false) {
     const { id, month, order, contribution, total, cumulativeTotal, row } = contributionRow;
     const disabled = !contributionsReady;
     const fields = [
@@ -306,33 +338,14 @@ function renderMobileContributionCard(contributionRow, monthPurchases, contribut
         .filter(([name]) => name === person)
         .map(([, field, label]) => `<label class="gold-contribution-card-field" data-column="${field}"><span>${label}</span>${formatAmountInput(contribution[field], month, field, id, disabled)}</label>`)
         .join('');
-    const groupedRows = groupRows || [contributionRow];
-    const tokens = groupTokens || [];
-    const groupLabel = groupedRows.map(item => `${compactMonthLabel(item.month)} · Đợt ${item.order}`).join(', ');
-    const groupContributions = groupedRows.map(item => item.contribution);
-    const groupDates = groupContributions.map(item =>
-        typeof item.purchaseDate === 'string' &&
-            dateKey(new Date(`${item.purchaseDate}T12:00:00`)) === item.purchaseDate
-            ? item.purchaseDate
-            : ''
-    );
-    const uniqueDates = [...new Set(groupDates)];
-    const groupStatuses = groupContributions.map(item =>
-        CONTRIBUTION_STATUSES.includes(item.status) ? item.status : 'CHƯA MUA'
-    );
-    const uniqueStatuses = [...new Set(groupStatuses)];
     const installmentLabel = row.match(/<small>Đợt (\d+)<\/small>/)?.[0] || '';
     const movement = monthPurchases.get(month) || { purchased: 0, withdrawn: 0 };
     const movementNotes = [
         movement.purchased ? `Đã mua ${formatQuantity(movement.purchased)}` : '',
         movement.withdrawn ? `Đã lấy ra ${formatQuantity(movement.withdrawn)}` : ''
     ].filter(Boolean).join(' · ');
-    const dateInput = groupTokens
-        ? formatMergedDateInput(uniqueDates.length > 1 ? '' : uniqueDates[0], tokens, groupLabel, disabled)
-        : formatDateInput(contribution.purchaseDate, month, id, disabled);
-    const statusInput = groupTokens
-        ? formatMergedStatusSelect(uniqueStatuses.length > 1 ? '' : uniqueStatuses[0], tokens, groupLabel, disabled, uniqueStatuses.length > 1)
-        : formatStatusSelect(contribution.status, month, id, disabled);
+    const dateInput = grouped ? '' : formatDateInput(contribution.purchaseDate, month, id, disabled);
+    const statusInput = grouped ? '' : formatStatusSelect(contribution.status, month, id, disabled);
     const actions = row.match(/<td data-column="actions" data-group-actions-placeholder>([\s\S]*?)<\/td>/)?.[1] || '';
     const amountFields = [
         ['fund', 'Quỹ'],
@@ -340,12 +353,24 @@ function renderMobileContributionCard(contributionRow, monthPurchases, contribut
         ['extra', 'Bù'],
         ['debt', 'Nợ']
     ].map(([field, label]) => `<label class="gold-contribution-card-field" data-column="${field}"><span>${label}</span>${formatAmountInput(contribution[field], month, field, id, disabled)}</label>`).join('');
+    const totalCard = grouped ? '' : `<div class="gold-contribution-card-total" data-column="total">
+        <span>Tổng tiền</span>
+        <strong>${money(total)}</strong>
+        <small>Dư lũy kế: ${money(cumulativeTotal)}</small>
+      </div>`;
+    const metaFields = grouped ? '' : `<div class="gold-contribution-card-meta">
+            <label class="gold-contribution-card-field" data-column="purchaseDate"><span>Ngày mua</span>${dateInput}${movementNotes ? `<small>${movementNotes}</small>` : ''}</label>
+            <label class="gold-contribution-card-field" data-column="status"><span>Trạng thái</span>${statusInput}</label>
+          </div>`;
 
-    return `<article class="gold-contribution-card" data-contribution-id="${escapeHTML(id)}" data-contribution-existing="${Boolean(row.match(/data-contribution-existing="true"/))}" data-contribution-month="${month}" data-contribution-order="${order}">
-      <header class="gold-contribution-card-header" data-column="month">
+    const header = grouped
+        ? `<header class="gold-contribution-card-header gold-contribution-group-entry-actions"><div class="actions" data-column="actions">${actions.replace(/^<div class="actions">|<\/div>$/g, '')}</div></header>`
+        : `<header class="gold-contribution-card-header" data-column="month">
         <strong>${compactMonthLabel(month)}${installmentLabel}</strong>
         <div class="actions" data-column="actions">${actions.replace(/^<div class="actions">|<\/div>$/g, '')}</div>
       </header>
+        `;
+    const cardContent = `${header}
       <section class="gold-contribution-card-person">
         <h3>Thanh Hòa</h3>
         <div>${personFields('Thanh Hòa')}</div>
@@ -354,24 +379,74 @@ function renderMobileContributionCard(contributionRow, monthPurchases, contribut
         <h3>Ngọc Yến</h3>
         <div>${personFields('Ngọc Yến')}</div>
       </section>
-      <div class="gold-contribution-card-total" data-column="total">
-        <span>Tổng tiền</span>
-        <strong>${money(total)}</strong>
-        <small>Dư lũy kế: ${money(cumulativeTotal)}</small>
-      </div>
+      ${totalCard}
       <details class="gold-contribution-card-more">
-        <summary>Khoản khác và trạng thái</summary>
+        <summary>${grouped ? 'Khoản khác' : 'Khoản khác và trạng thái'}</summary>
         <div class="gold-contribution-card-extra">
           <section class="gold-contribution-card-money">
             <label class="gold-contribution-card-field" data-column="cash"><span>Tiền</span>${formatCalculatedCash(getContributionCash(contribution), month)}</label>
             ${amountFields}
           </section>
-          <div class="gold-contribution-card-meta">
-            <label class="gold-contribution-card-field" data-column="purchaseDate"><span>Ngày mua</span>${dateInput}${movementNotes ? `<small>${movementNotes}</small>` : ''}</label>
-            <label class="gold-contribution-card-field" data-column="status"><span>Trạng thái</span>${statusInput}</label>
-          </div>
+          ${metaFields}
         </div>
-      </details>
+      </details>`;
+    const cardAttributes = `data-contribution-id="${escapeHTML(id)}" data-contribution-existing="${Boolean(row.match(/data-contribution-existing="true"/))}" data-contribution-month="${month}" data-contribution-order="${order}"`;
+    if (grouped) {
+        return `<article class="gold-contribution-card gold-contribution-group-entry-card" ${cardAttributes}>
+          <details class="gold-contribution-group-entry-details">
+            <summary class="gold-contribution-group-entry-summary" data-column="month">
+              <strong>${compactMonthLabel(month)}${installmentLabel}</strong>
+              <span data-column="total">${money(total)}</span>
+            </summary>
+            <div class="gold-contribution-group-entry-content">${cardContent}</div>
+          </details>
+        </article>`;
+    }
+
+    return `<article class="gold-contribution-card" ${cardAttributes}>${cardContent}</article>`;
+}
+
+function renderMobileContributionGroup(groupRows, groupTokens, monthPurchases, contributionsReady) {
+    const group = getMergedContributionGroupInfo(groupRows, monthPurchases);
+    if (group.orderedRows.length < 2) {
+        return group.orderedRows
+            .map(row => renderMobileContributionCard(row, monthPurchases, contributionsReady))
+            .join('');
+    }
+
+    const disabled = !contributionsReady;
+    const mobileGroupLabel = group.orderedRows
+        .map(row => `${compactMonthLabel(row.month)} · Đợt ${row.order}`)
+        .join(' + ');
+    const dateInput = formatMergedDateInput(group.sharedDate, groupTokens, group.groupLabel, disabled);
+    const statusInput = formatMergedStatusSelect(group.sharedStatus, groupTokens, group.groupLabel, disabled, group.mixedStatus);
+    const dateNotes = [
+        group.mixedDate ? 'Ngày mua khác nhau' : '',
+        group.movementNotes
+    ].filter(Boolean).join(' · ');
+    const groupDetails = `<details class="gold-contribution-group-details" data-group-details>
+      <summary>Ngày mua và trạng thái chung</summary>
+      <div class="gold-contribution-group-meta">
+        <label class="gold-contribution-card-field" data-column="purchaseDate"><span>Ngày mua</span>${dateInput}${dateNotes ? `<small>${dateNotes}</small>` : ''}</label>
+        <label class="gold-contribution-card-field" data-column="status"><span>Trạng thái</span>${statusInput}</label>
+      </div>
+    </details>`;
+    const rows = group.orderedRows
+        .map(row => renderMobileContributionCard(row, monthPurchases, contributionsReady, true))
+        .join('');
+
+    return `<article class="gold-contribution-group-card" data-group-key="${escapeHTML(JSON.stringify(groupTokens))}">
+      <header class="gold-contribution-group-header" data-column="month">
+        <span>Đã gộp</span>
+        <strong>${mobileGroupLabel}</strong>
+      </header>
+      <div class="gold-contribution-card-total" data-column="total">
+        <span>Tổng nhóm</span>
+        <strong>${money(group.groupTotal)}</strong>
+        <small>Dư lũy kế: ${money(group.cumulativeTotal)}</small>
+      </div>
+      ${groupDetails}
+      <div class="gold-contribution-group-entries">${rows}</div>
     </article>`;
 }
 
@@ -546,9 +621,7 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
                 contributionMonthRows.get(groupMonth) || []
             );
             renderedContributionRows.push(...renderMergedContributionRows(groupRows, monthGroup, monthPurchases, contributionsReady));
-            renderedContributionCards.push(...groupRows.map(row =>
-                renderMobileContributionCard(row, monthPurchases, contributionsReady, groupRows, monthGroup)
-            ));
+            renderedContributionCards.push(renderMobileContributionGroup(groupRows, monthGroup, monthPurchases, contributionsReady));
             return;
         }
 
@@ -566,9 +639,7 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
                 .map(token => contributionRowsById.get(token.slice(MERGED_ENTRY_PREFIX.length)))
                 .filter(Boolean);
             renderedContributionRows.push(...renderMergedContributionRows(groupRows, entryGroup, monthPurchases, contributionsReady));
-            renderedContributionCards.push(...groupRows.map(groupRow =>
-                renderMobileContributionCard(groupRow, monthPurchases, contributionsReady, groupRows, entryGroup)
-            ));
+            renderedContributionCards.push(renderMobileContributionGroup(groupRows, entryGroup, monthPurchases, contributionsReady));
         });
     });
 
@@ -578,10 +649,26 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
     const expandedCardIds = new Set([...contributionCards.querySelectorAll('.gold-contribution-card')]
         .filter(card => card.querySelector('.gold-contribution-card-more[open]'))
         .map(card => card.dataset.contributionId));
+    const expandedGroupEntryIds = new Set([...contributionCards.querySelectorAll('.gold-contribution-group-entry-card')]
+        .filter(card => card.querySelector('.gold-contribution-group-entry-details[open]'))
+        .map(card => card.dataset.contributionId));
+    const expandedGroupKeys = new Set([...contributionCards.querySelectorAll('.gold-contribution-group-card')]
+        .filter(card => card.querySelector('.gold-contribution-group-details[open]'))
+        .map(card => card.dataset.groupKey));
     contributionCards.innerHTML = renderedContributionCards.join('');
     contributionCards.querySelectorAll('.gold-contribution-card').forEach(card => {
         if (expandedCardIds.has(card.dataset.contributionId)) {
             card.querySelector('.gold-contribution-card-more').open = true;
+        }
+    });
+    contributionCards.querySelectorAll('.gold-contribution-group-entry-card').forEach(card => {
+        if (expandedGroupEntryIds.has(card.dataset.contributionId)) {
+            card.querySelector('.gold-contribution-group-entry-details').open = true;
+        }
+    });
+    contributionCards.querySelectorAll('.gold-contribution-group-card').forEach(card => {
+        if (expandedGroupKeys.has(card.dataset.groupKey)) {
+            card.querySelector('.gold-contribution-group-details').open = true;
         }
     });
     const sortedAdjustmentRows = contributionAdjustmentRows.sort((a, b) => b.date.localeCompare(a.date));
