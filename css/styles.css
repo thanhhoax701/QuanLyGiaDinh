@@ -1341,6 +1341,12 @@ td {
   border-color: #a7f3d0
 }
 
+.report-current-balance.has-balanced {
+  color: #475569;
+  background: #f8fafc;
+  border-color: #cbd5e1
+}
+
 .gold-summary-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1657,9 +1663,78 @@ td {
   font-weight: 500
 }
 
+.gold-purchase-cards {
+  display: none
+}
+
+.gold-purchase-card {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #e4e9f1;
+  border-radius: 10px;
+  background: var(--card)
+}
+
+.gold-purchase-card header,
+.gold-purchase-card-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px
+}
+
+.gold-purchase-card header>strong {
+  font-size: 13px
+}
+
+.gold-purchase-card .actions {
+  gap: 5px
+}
+
+.gold-purchase-type {
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 650
+}
+
+.gold-purchase-type.purchase {
+  color: #9a6700;
+  background: #fffbeb
+}
+
+.gold-purchase-type.withdrawal {
+  color: #dc2626;
+  background: #fff1f2
+}
+
+.gold-purchase-card-summary strong {
+  font-size: 14px
+}
+
+.gold-purchase-card-summary strong.purchase {
+  color: #9a6700
+}
+
+.gold-purchase-card-summary strong.withdrawal {
+  color: #dc2626
+}
+
+.gold-purchase-card p {
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere
+}
+
 .gold-contribution-table {
   width: max-content;
   min-width: 100%
+}
+
+.gold-contribution-cards {
+  display: none
 }
 
 .gold-contribution-table thead tr:first-child th:nth-child(1),
@@ -1719,6 +1794,64 @@ td {
 .gold-adjustment-history h3 {
   margin: 0;
   font-size: 14px
+}
+
+.gold-adjustment-cards {
+  display: none
+}
+
+.gold-adjustment-card {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid #e4e9f1;
+  border-radius: 10px;
+  background: var(--card)
+}
+
+.gold-adjustment-card header,
+.gold-adjustment-card-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px
+}
+
+.gold-adjustment-card header>strong {
+  font-size: 13px
+}
+
+.gold-adjustment-card .actions {
+  gap: 5px
+}
+
+.gold-adjustment-type {
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 650
+}
+
+.gold-adjustment-type.add {
+  color: #047857;
+  background: #ecfdf5
+}
+
+.gold-adjustment-type.subtract {
+  color: #dc2626;
+  background: #fff1f2
+}
+
+.gold-adjustment-card-period {
+  color: var(--muted);
+  font-size: 11px
+}
+
+.gold-adjustment-card p {
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere
 }
 
 .gold-adjustment-amount.add {
@@ -2517,6 +2650,158 @@ main {
   .gold-column-picker[open] .gold-column-picker-options {
     z-index: 31;
     max-height: min(360px, 70vh)
+  }
+
+  .gold-contribution-table {
+    display: none
+  }
+
+  .gold-contribution-cards {
+    display: grid;
+    gap: 10px
+  }
+
+  .gold-contribution-card {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #e4e9f1;
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: 0 2px 8px #18263b08
+  }
+
+  .gold-contribution-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #edf1f6
+  }
+
+  .gold-contribution-card-header strong {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 15px
+  }
+
+  .gold-contribution-card-header small {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 500
+  }
+
+  .gold-contribution-card-header .actions {
+    gap: 5px
+  }
+
+  .gold-contribution-card-person {
+    display: grid;
+    gap: 5px
+  }
+
+  .gold-contribution-card-person h3 {
+    margin: 0;
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 650
+  }
+
+  .gold-contribution-card-person>div,
+  .gold-contribution-card-money,
+  .gold-contribution-card-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px
+  }
+
+  .gold-contribution-card-field {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    color: #64748b;
+    font-size: 11px
+  }
+
+  .gold-contribution-card-field input,
+  .gold-contribution-card-field select {
+    width: 100%;
+    min-width: 0;
+    min-height: 38px;
+    box-sizing: border-box
+  }
+
+  .gold-contribution-card-field .gold-contribution-input {
+    width: 100%;
+    min-width: 0;
+    text-align: left
+  }
+
+  .gold-contribution-card-field small {
+    color: var(--muted);
+    font-size: 10px;
+    white-space: normal
+  }
+
+  .gold-contribution-card-total {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: baseline;
+    gap: 2px 8px;
+    padding: 9px 10px;
+    border-radius: 8px;
+    background: #f5f7ff;
+    color: #64748b;
+    font-size: 11px
+  }
+
+  .gold-contribution-card-total strong {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    color: #3730a3;
+    font-size: 15px
+  }
+
+  .gold-contribution-card-total small {
+    font-size: 10px
+  }
+
+  .gold-contribution-card-more summary {
+    color: #2675f5;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer
+  }
+
+  .gold-contribution-card-extra {
+    display: grid;
+    gap: 10px;
+    margin-top: 10px
+  }
+
+  .gold-contribution-card [data-column="actions"] .icon-btn {
+    padding: 6px 8px
+  }
+
+  .gold-adjustment-table {
+    display: none
+  }
+
+  .gold-adjustment-cards {
+    display: grid;
+    gap: 8px
+  }
+
+  .gold-purchase-table {
+    display: none
+  }
+
+  .gold-purchase-cards {
+    display: grid;
+    gap: 8px
   }
 
   .gold-contribution-table thead tr:first-child th:nth-child(1),

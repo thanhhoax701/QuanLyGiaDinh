@@ -589,7 +589,7 @@ document.addEventListener('click', event => {
   }
 });
 
-$('goldContributionRows').addEventListener('click', event => {
+$('goldContributionContent').addEventListener('click', event => {
   const add = event.target.closest('[data-add-contribution]');
   const remove = event.target.closest('[data-delete-contribution]');
   const adjust = event.target.closest('[data-add-contribution-adjustment]');
@@ -685,7 +685,7 @@ $('goldUngroupForm').addEventListener('submit', event => {
   }
 });
 
-$('goldContributionAdjustmentRows').addEventListener('click', event => {
+$('goldAdjustmentHistory').addEventListener('click', event => {
   const edit = event.target.closest('[data-edit-contribution-adjustment]');
   const remove = event.target.closest('[data-delete-contribution-adjustment]');
   if (!edit && !remove) return;
@@ -743,7 +743,7 @@ goldContributionColumnPicker.addEventListener('change', async event => {
   }
 });
 
-$('goldContributionRows').addEventListener('change', event => {
+$('goldContributionContent').addEventListener('change', event => {
   const input = event.target.closest('[data-contribution]');
   if (!input) return;
   if (!goldContributionsCloudReady) {

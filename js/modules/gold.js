@@ -99,6 +99,9 @@ function applyContributionColumnVisibility() {
     table.querySelectorAll('[data-column]').forEach(cell => {
         cell.hidden = !visibleContributionColumns.has(cell.dataset.column);
     });
+    $('goldContributionCards').querySelectorAll('[data-column]').forEach(cell => {
+        cell.hidden = !visibleContributionColumns.has(cell.dataset.column);
+    });
     Object.entries(CONTRIBUTION_COLUMN_GROUPS).forEach(([group, columns]) => {
         const heading = table.querySelector(`[data-column-group="${group}"]`);
         heading.colSpan = columns.filter(key => visibleContributionColumns.has(key)).length;
@@ -290,6 +293,88 @@ function renderMergedTotalCell(total, cumulativeTotal, rowCount) {
     return `<td class="gold-contribution-total gold-merged-total-cell" data-column="total" rowspan="${rowCount}">${money(total)}<small>Dư: ${money(cumulativeTotal)}</small></td>`;
 }
 
+function renderMobileContributionCard(contributionRow, monthPurchases, contributionsReady, groupRows, groupTokens) {
+    const { id, month, order, contribution, total, cumulativeTotal, row } = contributionRow;
+    const disabled = !contributionsReady;
+    const fields = [
+        ['Thanh Hòa', 'thanhHoaKpi', 'KPI'],
+        ['Thanh Hòa', 'thanhHoaSalary', 'Lương'],
+        ['Ngọc Yến', 'ngocYenKpi', 'KPI'],
+        ['Ngọc Yến', 'ngocYenSalary', 'Lương']
+    ];
+    const personFields = person => fields
+        .filter(([name]) => name === person)
+        .map(([, field, label]) => `<label class="gold-contribution-card-field" data-column="${field}"><span>${label}</span>${formatAmountInput(contribution[field], month, field, id, disabled)}</label>`)
+        .join('');
+    const groupedRows = groupRows || [contributionRow];
+    const tokens = groupTokens || [];
+    const groupLabel = groupedRows.map(item => `${compactMonthLabel(item.month)} · Đợt ${item.order}`).join(', ');
+    const groupContributions = groupedRows.map(item => item.contribution);
+    const groupDates = groupContributions.map(item =>
+        typeof item.purchaseDate === 'string' &&
+            dateKey(new Date(`${item.purchaseDate}T12:00:00`)) === item.purchaseDate
+            ? item.purchaseDate
+            : ''
+    );
+    const uniqueDates = [...new Set(groupDates)];
+    const groupStatuses = groupContributions.map(item =>
+        CONTRIBUTION_STATUSES.includes(item.status) ? item.status : 'CHƯA MUA'
+    );
+    const uniqueStatuses = [...new Set(groupStatuses)];
+    const installmentLabel = row.match(/<small>Đợt (\d+)<\/small>/)?.[0] || '';
+    const movement = monthPurchases.get(month) || { purchased: 0, withdrawn: 0 };
+    const movementNotes = [
+        movement.purchased ? `Đã mua ${formatQuantity(movement.purchased)}` : '',
+        movement.withdrawn ? `Đã lấy ra ${formatQuantity(movement.withdrawn)}` : ''
+    ].filter(Boolean).join(' · ');
+    const dateInput = groupTokens
+        ? formatMergedDateInput(uniqueDates.length > 1 ? '' : uniqueDates[0], tokens, groupLabel, disabled)
+        : formatDateInput(contribution.purchaseDate, month, id, disabled);
+    const statusInput = groupTokens
+        ? formatMergedStatusSelect(uniqueStatuses.length > 1 ? '' : uniqueStatuses[0], tokens, groupLabel, disabled, uniqueStatuses.length > 1)
+        : formatStatusSelect(contribution.status, month, id, disabled);
+    const actions = row.match(/<td data-column="actions" data-group-actions-placeholder>([\s\S]*?)<\/td>/)?.[1] || '';
+    const amountFields = [
+        ['fund', 'Quỹ'],
+        ['pig', 'Heo'],
+        ['extra', 'Bù'],
+        ['debt', 'Nợ']
+    ].map(([field, label]) => `<label class="gold-contribution-card-field" data-column="${field}"><span>${label}</span>${formatAmountInput(contribution[field], month, field, id, disabled)}</label>`).join('');
+
+    return `<article class="gold-contribution-card" data-contribution-id="${escapeHTML(id)}" data-contribution-existing="${Boolean(row.match(/data-contribution-existing="true"/))}" data-contribution-month="${month}" data-contribution-order="${order}">
+      <header class="gold-contribution-card-header" data-column="month">
+        <strong>${compactMonthLabel(month)}${installmentLabel}</strong>
+        <div class="actions" data-column="actions">${actions.replace(/^<div class="actions">|<\/div>$/g, '')}</div>
+      </header>
+      <section class="gold-contribution-card-person">
+        <h3>Thanh Hòa</h3>
+        <div>${personFields('Thanh Hòa')}</div>
+      </section>
+      <section class="gold-contribution-card-person">
+        <h3>Ngọc Yến</h3>
+        <div>${personFields('Ngọc Yến')}</div>
+      </section>
+      <div class="gold-contribution-card-total" data-column="total">
+        <span>Tổng tiền</span>
+        <strong>${money(total)}</strong>
+        <small>Dư lũy kế: ${money(cumulativeTotal)}</small>
+      </div>
+      <details class="gold-contribution-card-more">
+        <summary>Khoản khác và trạng thái</summary>
+        <div class="gold-contribution-card-extra">
+          <section class="gold-contribution-card-money">
+            <label class="gold-contribution-card-field" data-column="cash"><span>Tiền</span>${formatCalculatedCash(getContributionCash(contribution), month)}</label>
+            ${amountFields}
+          </section>
+          <div class="gold-contribution-card-meta">
+            <label class="gold-contribution-card-field" data-column="purchaseDate"><span>Ngày mua</span>${dateInput}${movementNotes ? `<small>${movementNotes}</small>` : ''}</label>
+            <label class="gold-contribution-card-field" data-column="status"><span>Trạng thái</span>${statusInput}</label>
+          </div>
+        </div>
+      </details>
+    </article>`;
+}
+
 export function renderGoldFund(purchases, contributions = [], contributionsReady = true) {
     const today = dateKey(new Date());
     const validPurchases = purchases.filter(purchase =>
@@ -406,9 +491,11 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
                 const date = adjustment.date.split('-').reverse().join('/');
                 const amount = `${adjustment.type === 'subtract' ? '−' : '+'}${money(adjustment.amount)}`;
                 const type = adjustment.type === 'subtract' ? 'Trừ' : 'Cộng';
+                const actionButtons = `<div class="actions"><button class="icon-btn" type="button" title="Sửa điều chỉnh" aria-label="Sửa điều chỉnh ${type.toLowerCase()} ${money(adjustment.amount)} ngày ${date}" data-edit-contribution-adjustment="${escapeHTML(id)}" data-adjustment-id="${escapeHTML(adjustment.id)}"${!contributionsReady ? ' disabled' : ''}>✎</button><button class="icon-btn delete" type="button" title="Xóa điều chỉnh" aria-label="Xóa điều chỉnh ${type.toLowerCase()} ${money(adjustment.amount)} ngày ${date}" data-delete-contribution-adjustment="${escapeHTML(id)}" data-adjustment-id="${escapeHTML(adjustment.id)}"${!contributionsReady ? ' disabled' : ''}>⌫</button></div>`;
                 contributionAdjustmentRows.push({
                     date: adjustment.date,
-                    html: `<tr><td>${date}</td><td>${compactMonthLabel(month)} · Đợt ${order}</td><td>${type}</td><td>${escapeHTML(adjustment.note)}</td><td class="gold-adjustment-amount ${adjustment.type}">${amount}</td><td><div class="actions"><button class="icon-btn" type="button" title="Sửa điều chỉnh" aria-label="Sửa điều chỉnh ${type.toLowerCase()} ${money(adjustment.amount)} ngày ${date}" data-edit-contribution-adjustment="${escapeHTML(id)}" data-adjustment-id="${escapeHTML(adjustment.id)}"${!contributionsReady ? ' disabled' : ''}>✎</button><button class="icon-btn delete" type="button" title="Xóa điều chỉnh" aria-label="Xóa điều chỉnh ${type.toLowerCase()} ${money(adjustment.amount)} ngày ${date}" data-delete-contribution-adjustment="${escapeHTML(id)}" data-adjustment-id="${escapeHTML(adjustment.id)}"${!contributionsReady ? ' disabled' : ''}>⌫</button></div></td></tr>`
+                    html: `<tr><td>${date}</td><td>${compactMonthLabel(month)} · Đợt ${order}</td><td>${type}</td><td>${escapeHTML(adjustment.note)}</td><td class="gold-adjustment-amount ${adjustment.type}">${amount}</td><td>${actionButtons}</td></tr>`,
+                    cardHtml: `<article class="gold-adjustment-card"><header><strong>${date}</strong>${actionButtons}</header><div class="gold-adjustment-card-summary"><span class="gold-adjustment-type ${adjustment.type}">${type}</span><strong class="gold-adjustment-amount ${adjustment.type}">${amount}</strong></div><div class="gold-adjustment-card-period">${compactMonthLabel(month)} · Đợt ${order}</div><p>${escapeHTML(adjustment.note) || '—'}</p></article>`
                 });
             });
             const amountCells = CONTRIBUTION_FIELDS.map(field =>
@@ -441,6 +528,7 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
     }
 
     const renderedContributionRows = [];
+    const renderedContributionCards = [];
     const renderedGroups = new Set();
     [...contributionMonthRows.keys()].sort().reverse().forEach(month => {
         const monthGroup = mergedGroupsByMonth.get(month);
@@ -452,6 +540,9 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
                 contributionMonthRows.get(groupMonth) || []
             );
             renderedContributionRows.push(...renderMergedContributionRows(groupRows, monthGroup, monthPurchases, contributionsReady));
+            renderedContributionCards.push(...groupRows.map(row =>
+                renderMobileContributionCard(row, monthPurchases, contributionsReady, groupRows, monthGroup)
+            ));
             return;
         }
 
@@ -459,6 +550,7 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
             const entryGroup = mergedGroupsByEntryId.get(row.id);
             if (!entryGroup) {
                 renderedContributionRows.push(renderPlainContributionRow(row));
+                renderedContributionCards.push(renderMobileContributionCard(row, monthPurchases, contributionsReady));
                 return;
             }
             const groupKey = JSON.stringify(entryGroup);
@@ -468,24 +560,46 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
                 .map(token => contributionRowsById.get(token.slice(MERGED_ENTRY_PREFIX.length)))
                 .filter(Boolean);
             renderedContributionRows.push(...renderMergedContributionRows(groupRows, entryGroup, monthPurchases, contributionsReady));
+            renderedContributionCards.push(...groupRows.map(groupRow =>
+                renderMobileContributionCard(groupRow, monthPurchases, contributionsReady, groupRows, entryGroup)
+            ));
         });
     });
 
     $('goldContributionTotal').textContent = money(cumulativeTotal);
     $('goldContributionRows').innerHTML = renderedContributionRows.join('') || '<tr><td colspan="14" class="empty">Chưa có đợt tích góp.</td></tr>';
-    $('goldContributionAdjustmentRows').innerHTML = contributionAdjustmentRows
-        .sort((a, b) => b.date.localeCompare(a.date))
+    const contributionCards = $('goldContributionCards');
+    const expandedCardIds = new Set([...contributionCards.querySelectorAll('.gold-contribution-card')]
+        .filter(card => card.querySelector('.gold-contribution-card-more[open]'))
+        .map(card => card.dataset.contributionId));
+    contributionCards.innerHTML = renderedContributionCards.join('');
+    contributionCards.querySelectorAll('.gold-contribution-card').forEach(card => {
+        if (expandedCardIds.has(card.dataset.contributionId)) {
+            card.querySelector('.gold-contribution-card-more').open = true;
+        }
+    });
+    const sortedAdjustmentRows = contributionAdjustmentRows.sort((a, b) => b.date.localeCompare(a.date));
+    $('goldContributionAdjustmentRows').innerHTML = sortedAdjustmentRows
         .map(row => row.html)
         .join('') || '<tr><td colspan="6" class="empty">Chưa có khoản điều chỉnh.</td></tr>';
+    $('goldContributionAdjustmentCards').innerHTML = sortedAdjustmentRows
+        .map(row => row.cardHtml)
+        .join('') || '<p class="empty">Chưa có khoản điều chỉnh.</p>';
     applyContributionColumnVisibility();
-    $('goldPurchaseRows').innerHTML = validPurchases.length
-        ? validPurchases.slice().sort((a, b) => b.date.localeCompare(a.date)).map(purchase => {
+    const renderedPurchases = validPurchases.slice().sort((a, b) => b.date.localeCompare(a.date)).map(purchase => {
             const date = purchase.date.split('-').reverse().join('/');
             const type = purchase.type === 'withdrawal' ? 'Lấy ra' : 'Mua';
             const quantity = `${purchase.type === 'withdrawal' ? '−' : '+'}${formatQuantity(purchase.quantity)}`;
-            const note = escapeHTML(purchase.note || '—');
-            const mobileDetails = `<details class="gold-purchase-details"><summary>Xem thêm</summary><div class="gold-purchase-details-info"><span>Loại</span><strong>${type}</strong><span>Ghi chú</span><strong>${note}</strong></div></details>`;
-            return `<tr><td>${date}${mobileDetails}</td><td>${type}</td><td>${quantity}</td><td>${note}</td><td><div class="actions"><button class="icon-btn" type="button" title="Sửa giao dịch vàng" aria-label="Sửa giao dịch vàng ngày ${date}" data-edit-gold="${escapeHTML(purchase.id)}">Sửa</button><button class="icon-btn delete" type="button" title="Xóa giao dịch vàng" aria-label="Xóa giao dịch vàng" data-delete-gold="${escapeHTML(purchase.id)}">⌫</button></div></td></tr>`;
-        }).join('')
-        : '<tr><td colspan="5" class="empty">Chưa có giao dịch vàng.</td></tr>';
+            const note = escapeHTML(purchase.note || '');
+            const displayNote = note || '—';
+            const actions = `<div class="actions"><button class="icon-btn" type="button" title="Sửa giao dịch vàng" aria-label="Sửa giao dịch vàng ngày ${date}" data-edit-gold="${escapeHTML(purchase.id)}">Sửa</button><button class="icon-btn delete" type="button" title="Xóa giao dịch vàng" aria-label="Xóa giao dịch vàng" data-delete-gold="${escapeHTML(purchase.id)}">⌫</button></div>`;
+            return {
+                row: `<tr><td>${date}</td><td>${type}</td><td>${quantity}</td><td>${displayNote}</td><td>${actions}</td></tr>`,
+                card: `<article class="gold-purchase-card"><header><strong>${date}</strong>${actions}</header><div class="gold-purchase-card-summary"><span class="gold-purchase-type ${purchase.type === 'withdrawal' ? 'withdrawal' : 'purchase'}">${type}</span><strong class="${purchase.type === 'withdrawal' ? 'withdrawal' : 'purchase'}">${quantity}</strong></div>${note ? `<p>${note}</p>` : ''}</article>`
+            };
+        });
+    $('goldPurchaseRows').innerHTML = renderedPurchases.map(purchase => purchase.row).join('')
+        || '<tr><td colspan="5" class="empty">Chưa có giao dịch vàng.</td></tr>';
+    $('goldPurchaseCards').innerHTML = renderedPurchases.map(purchase => purchase.card).join('')
+        || '<p class="empty">Chưa có giao dịch vàng.</p>';
 }

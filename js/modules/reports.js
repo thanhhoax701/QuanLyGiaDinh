@@ -61,10 +61,11 @@ function renderMonthlyReport(transactions) {
     const currentBalance = getDailyLimitNetBalance(transactions, dateKey(now));
     const balanceCard = $('reportCurrentBalanceCard');
     balanceCard.classList.toggle('has-debt', currentBalance > 0);
-    balanceCard.classList.toggle('has-surplus', currentBalance <= 0);
-    $('reportCurrentBalanceLabel').textContent = currentBalance > 0 ? 'Tổng nợ hiện tại' : 'Tổng dư hiện tại';
+    balanceCard.classList.toggle('has-surplus', currentBalance < 0);
+    balanceCard.classList.toggle('has-balanced', currentBalance === 0);
+    $('reportCurrentBalanceLabel').textContent = currentBalance > 0 ? 'Tổng nợ hiện tại' : currentBalance < 0 ? 'Tổng dư hiện tại' : 'Số dư hiện tại';
     $('reportCurrentBalance').textContent = money(Math.abs(currentBalance));
-    $('reportCurrentBalanceStatus').textContent = currentBalance > 0 ? 'Đang nợ' : 'Đang dư';
+    $('reportCurrentBalanceStatus').textContent = currentBalance > 0 ? 'Đang nợ' : currentBalance < 0 ? 'Đang dư' : 'Sạch túi';
     const dailyLimitSpendingByDay = {}, dailyLimitPaymentsByDay = {};
     transactions.forEach(t => {
         const day = dateKey(txDate(t));
