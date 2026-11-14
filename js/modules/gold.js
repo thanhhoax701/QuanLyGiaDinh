@@ -427,6 +427,7 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
         ? parseMonth(purchaseMonths[purchaseMonths.length - 1])
         : lastMonth;
     const goldMonthlyRows = [];
+    const goldMonthlyCards = [];
     let monthlyGoldTotal = 0;
     while (goldCursor <= goldFinalMonth) {
         const month = `${goldCursor.getFullYear()}-${String(goldCursor.getMonth() + 1).padStart(2, '0')}`;
@@ -438,9 +439,14 @@ export function renderGoldFund(purchases, contributions = [], contributionsReady
             : '—';
         const monthlyDetails = `<details class="gold-month-details"><summary>Xem thêm</summary><div class="gold-month-details-info"><span>Đã mua trong tháng</span><strong>${formatQuantity(movement.purchased)}</strong><span>Đã lấy ra trong tháng</span><strong>${formatQuantity(movement.withdrawn)}</strong></div></details>`;
         goldMonthlyRows.push(`<tr><td>${monthLabel(month)}${monthlyDetails}</td><td class="gold-month-movement">${formatQuantity(movement.purchased)}</td><td class="gold-month-movement">${formatQuantity(movement.withdrawn)}</td><td><strong>${formatQuantity(monthlyGoldTotal)}</strong></td><td><div class="actions">${editButton}</div></td></tr>`);
+        const mobileActions = monthTransactions.length ? `<div class="actions">${editButton}</div>` : '';
+        const mobileDetails = movement.purchased || movement.withdrawn ? monthlyDetails : '';
+        goldMonthlyCards.push(`<article class="gold-month-card"><header><strong>${compactMonthLabel(month)}</strong>${mobileActions}</header><div class="gold-month-card-balance"><span>Dư vàng cuối tháng</span><strong>${formatQuantity(monthlyGoldTotal)}</strong></div>${mobileDetails}</article>`);
         goldCursor.setMonth(goldCursor.getMonth() + 1);
     }
     $('goldMonthlyRows').innerHTML = goldMonthlyRows.reverse().join('') || '<tr><td colspan="3" class="empty">Chưa có dữ liệu vàng theo tháng.</td></tr>';
+    $('goldMonthlyCards').innerHTML = goldMonthlyCards.reverse().join('')
+        || '<p class="empty">Chưa có dữ liệu vàng theo tháng.</p>';
     const cursor = parseMonth(GOLD_START_MONTH);
     const finalMonth = parseMonth(latestMonth) > lastMonth ? parseMonth(latestMonth) : lastMonth;
     const contributionMonthRows = new Map();
