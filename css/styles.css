@@ -2518,6 +2518,92 @@ main {
     font-size: 11px;
     text-align: right
   }
+
+  #page-reports .debt-payment-history {
+    display: block;
+    min-width: 0;
+    table-layout: auto
+  }
+
+  #page-reports .debt-payment-history thead {
+    display: none
+  }
+
+  #page-reports .debt-payment-history tbody {
+    display: grid;
+    gap: 8px
+  }
+
+  #page-reports .debt-payment-history tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff
+  }
+
+  #page-reports .debt-payment-history tbody td {
+    min-width: 0;
+    padding: 5px;
+    border: 0;
+    white-space: normal;
+    overflow-wrap: anywhere
+  }
+
+  #page-reports .debt-payment-history tbody td:nth-child(1) {
+    grid-column: 1
+  }
+
+  #page-reports .debt-payment-history tbody td:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2
+  }
+
+  #page-reports .debt-payment-history tbody td:nth-child(3) {
+    grid-column: 2;
+    grid-row: 2
+  }
+
+  #page-reports .debt-payment-history tbody td:nth-child(2)::before,
+  #page-reports .debt-payment-history tbody td:nth-child(3)::before,
+  #page-reports .debt-payment-history tbody td:nth-child(4)::before {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 500
+  }
+
+  #page-reports .debt-payment-history tbody td:nth-child(2)::before {
+    content: "Số tiền đã xóa"
+  }
+
+  #page-reports .debt-payment-history tbody td:nth-child(3)::before {
+    content: "Nợ còn lại"
+  }
+
+  #page-reports .debt-payment-history tbody td:nth-child(4) {
+    grid-column: 1/-1
+  }
+
+  #page-reports .debt-payment-history tbody td:nth-child(4)::before {
+    content: "Ghi chú"
+  }
+
+  #page-reports .debt-payment-history tbody td:nth-child(5) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: end
+  }
+
+  #page-reports .debt-payment-history tbody td.empty {
+    display: block;
+    grid-column: 1/-1;
+    padding: 14px 8px;
+    text-align: center
+  }
 }
 
 #page-reports .report-day-total>.report-day-debt-total {
